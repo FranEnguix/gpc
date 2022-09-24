@@ -11,9 +11,10 @@ import {GLTFLoader} from "../lib/GLTFLoader.module.js";
 
 // Variables estandar
 let renderer, scene, camera;
+let robot;
 
 // Otras globales
-let esferaCubo;
+// let esferaCubo;
 let angulo = 0;
 
 window.addEventListener('load', () => {
@@ -23,49 +24,159 @@ window.addEventListener('load', () => {
     render();
 });
 
+function instantiateCamera() {
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+    camera.position.set(0, 200, 400);
+    camera.lookAt(0, 0, 0);
+}
+
 function init()
 {
     // Instanciar el motor de render
     renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth,window.innerHeight);
-    document.querySelector('canvas').appendChild(renderer.domElement);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.querySelector('div').appendChild(renderer.domElement);
 
     // Instanciar el nodo raiz de la escena
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0.5,0.5,0.5);
+    scene.background = new THREE.Color(0.5, 0.5, 0.5);
 
     // Instanciar la camara
-    camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,1,100);
-    camera.position.set(0.5,2,7);
-    camera.lookAt(0,1,0);
+    instantiateCamera();
 }
+
+function getBasicMaterial() {
+    return new THREE.MeshBasicMaterial(
+        { color: 'blue', wireframe: true }
+    );
+}
+
+function getFloor(material) {
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000, 10, 10), material);
+    floor.rotation.x = -Math.PI/2;
+    return floor;
+}
+
+function getBase(material) {
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(50, 50, 15, 64), material);
+    base.position.set(0, 0, 0);
+    return base;
+}
+
+function getEje(material) {
+    const eje = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 18, 64), material);
+    eje.rotateZ(Math.PI / 2);
+    eje.position.set(0, 15 / 2, 0);
+    return eje;
+}
+
+function getEsparrago(material) {
+    const esparrago = new THREE.Mesh(new THREE.BoxGeometry(18, 120, 12, 64, 64), material);
+    esparrago.rotateY(Math.PI / 2);
+    esparrago.position.set(0, 15 / 2 + 120 / 2, 0);
+    return esparrago;
+}
+
+function getRotula(material) {
+    const rotula = new THREE.Mesh(new THREE.SphereGeometry(20, 32, 32), material);
+    rotula.position.set(0, 15 / 2 + 120, 0);
+    return rotula;
+}
+
+function getBrazo(material) {
+    const brazo = new THREE.Object3D();
+    brazo.position.set(0, 0, 0);
+
+    const eje = getEje(material);
+    const esparrago = getEsparrago(material);
+    const rotula = getRotula(material);
+    const antebrazo = getAntebrazo(material);
+
+    brazo.add(eje);
+    brazo.add(esparrago);
+    brazo.add(rotula);
+    brazo.add(antebrazo);
+
+    return brazo;
+}
+
+function getDisco(material) {
+    const disco = new THREE.Mesh(new THREE.CylinderGeometry(22, 22, 6, 64), material);
+    disco.position.set(0, 0, 0);
+    return disco;
+}
+
+function getNervios(material) {
+    const nervios = [];
+    const positions = [[8, 4], [8, -4], [-8, 4], [-8, -4]];
+    positions.forEach((pos) => {
+        const nervio = new THREE.Mesh(new THREE.BoxGeometry(4, 80, 4), material);
+        nervio.position.set(pos[0], 80 / 2 + 6, pos[1]);
+        nervios.push(nervio);
+    });
+    return nervios;
+}
+
+function getMano(material) {
+    const mano = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 40, 64), material);
+    mano.position.set(0, 80 + 6, 0);
+    mano.rotateZ(Math.PI / 2);
+    return mano;
+}
+
+function getAntebrazo(material) {
+    const antebrazo = new THREE.Object3D();
+    antebrazo.position.set(0, 15 / 2 + 120, 0);
+
+    const disco = getDisco(material);
+    const nervios = getNervios(material);
+    const mano = getMano(material);
+
+    antebrazo.add(disco);
+    nervios.forEach((nervio) => { antebrazo.add(nervio); });
+    antebrazo.add(mano);
+
+    return antebrazo;
+}
+
+function getPinza(material) {
+
+}
+
 
 function loadScene()
 {
     // Material sencillo
-    const material = new THREE.MeshBasicMaterial({color:'yellow',wireframe:true});
+    const material = getBasicMaterial();
 
-    // Suelo
-    const suelo = new THREE.Mesh( new THREE.PlaneGeometry(10,10, 10,10), material );
-    suelo.rotation.x = -Math.PI/2;
-    suelo.position.y = -0.2;
-    scene.add(suelo);
+    // Robot 
+    robot = new THREE.Object3D();
+    const base = getBase(material);
+    const brazo = getBrazo(material);
 
-    // Esfera y cubo
-    const esfera = new THREE.Mesh( new THREE.SphereGeometry(1,20,20), material );
-    const cubo = new THREE.Mesh( new THREE.BoxGeometry(2,2,2), material );
-    esfera.position.x = 1;
-    cubo.position.x = -1;
+    // Robot hierarchy
+    robot.add(base);
+    base.add(brazo);
+    scene.add(robot);
 
-    esferaCubo = new THREE.Object3D();
-    esferaCubo.add(esfera);
-    esferaCubo.add(cubo);
-    esferaCubo.position.y = 1.5;
+    // Floor
+    scene.add(getFloor(material));
 
-    scene.add(esferaCubo);
+    // // Esfera y cubo
+    // const esfera = new THREE.Mesh( new THREE.SphereGeometry(1,20,20), material );
+    // const cubo = new THREE.Mesh( new THREE.BoxGeometry(2,2,2), material );
+    // esfera.position.x = 1;
+    // cubo.position.x = -1;
 
-    scene.add( new THREE.AxesHelper(3) );
-    cubo.add( new THREE.AxesHelper(1) );
+    // esferaCubo = new THREE.Object3D();
+    // esferaCubo.add(esfera);
+    // esferaCubo.add(cubo);
+    // esferaCubo.position.y = 1.5;
+
+    // scene.add(esferaCubo);
+
+    // scene.add( new THREE.AxesHelper(3) );
+    // cubo.add( new THREE.AxesHelper(1) );
 
     // Modelos importados
     // const loader = new THREE.ObjectLoader();
@@ -92,12 +203,12 @@ function loadScene()
 function update()
 {
     angulo += 0.01;
-    esferaCubo.rotation.y = angulo;
+    // esferaCubo.rotation.y = angulo;
 }
 
 function render()
 {
     requestAnimationFrame(render);
     update();
-    renderer.render(scene,camera);
+    renderer.render(scene, camera);
 }
