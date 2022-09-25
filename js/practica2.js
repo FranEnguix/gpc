@@ -47,7 +47,7 @@ function init()
 
 function getBasicMaterial() {
     return new THREE.MeshBasicMaterial(
-        { color: 'blue', wireframe: true }
+        { color: 'yellow', wireframe: true }
     );
 }
 
@@ -66,26 +66,26 @@ function getBase(material) {
 function getEje(material) {
     const eje = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 18, 64), material);
     eje.rotateZ(Math.PI / 2);
-    eje.position.set(0, 15 / 2, 0);
+    eje.position.set(0, 0, 0);
     return eje;
 }
 
 function getEsparrago(material) {
     const esparrago = new THREE.Mesh(new THREE.BoxGeometry(18, 120, 12, 64, 64), material);
     esparrago.rotateY(Math.PI / 2);
-    esparrago.position.set(0, 15 / 2 + 120 / 2, 0);
+    esparrago.position.set(0, 120 / 2, 0);
     return esparrago;
 }
 
 function getRotula(material) {
     const rotula = new THREE.Mesh(new THREE.SphereGeometry(20, 32, 32), material);
-    rotula.position.set(0, 15 / 2 + 120, 0);
+    rotula.position.set(0, 120, 0);
     return rotula;
 }
 
 function getBrazo(material) {
     const brazo = new THREE.Object3D();
-    brazo.position.set(0, 0, 0);
+    brazo.position.set(0, 15 / 2, 0);
 
     const eje = getEje(material);
     const esparrago = getEsparrago(material);
@@ -121,16 +121,29 @@ function getMano(material) {
     const mano = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 40, 64), material);
     mano.position.set(0, 80 + 6, 0);
     mano.rotateZ(Math.PI / 2);
+
+    const pinzaI = getPinza(material);
+    pinzaI.position.set(0, 10, 15);
+    const pinzaD = getPinza(material);
+    pinzaD.position.set(0, -10, 15);
+
+    mano.add(pinzaI);
+    mano.add(pinzaD);
+    camera.position.set(pinzaI.position.x, pinzaI.position.y + 250, pinzaI.position.z + 80)
     return mano;
 }
 
 function getAntebrazo(material) {
     const antebrazo = new THREE.Object3D();
-    antebrazo.position.set(0, 15 / 2 + 120, 0);
+    antebrazo.position.set(0, 120, 0);
 
     const disco = getDisco(material);
     const nervios = getNervios(material);
-    const mano = getMano(material);
+
+    const manoMaterial =  new THREE.MeshBasicMaterial(
+        { color: 'red', wireframe: true }
+    );
+    const mano = getMano(manoMaterial);
 
     antebrazo.add(disco);
     nervios.forEach((nervio) => { antebrazo.add(nervio); });
@@ -139,8 +152,97 @@ function getAntebrazo(material) {
     return antebrazo;
 }
 
-function getPinza(material) {
+function getPinzaTipGeometry() {
+    const vertices = [
+        // front
+        { pos: [-10, -10,  10], norm: [ 0,  0,  1], uv: [0, 1], },
+        { pos: [ 10, -10,  10], norm: [ 0,  0,  1], uv: [1, 1], },
+        { pos: [-10,  10,  10], norm: [ 0,  0,  1], uv: [0, 0], },
+        
+        { pos: [-10,  10,  1], norm: [ 0,  0,  1], uv: [0, 0], },
+        { pos: [ 10, -10,  1], norm: [ 0,  0,  1], uv: [1, 1], },
+        { pos: [ 10,  10,  1], norm: [ 0,  0,  1], uv: [1, 0], },
+        // right
+        { pos: [ 1, -1,  1], norm: [ 1,  0,  0], uv: [0, 1], },
+        { pos: [ 1, -1, -1], norm: [ 1,  0,  0], uv: [1, 1], },
+        { pos: [ 1,  1,  1], norm: [ 1,  0,  0], uv: [0, 0], },
+        
+        { pos: [ 1,  1,  1], norm: [ 1,  0,  0], uv: [0, 0], },
+        { pos: [ 1, -1, -1], norm: [ 1,  0,  0], uv: [1, 1], },
+        { pos: [ 1,  1, -1], norm: [ 1,  0,  0], uv: [1, 0], },
+        // back
+        { pos: [ 1, -1, -1], norm: [ 0,  0, -1], uv: [0, 1], },
+        { pos: [-1, -1, -1], norm: [ 0,  0, -1], uv: [1, 1], },
+        { pos: [ 1,  1, -1], norm: [ 0,  0, -1], uv: [0, 0], },
+        
+        { pos: [ 1,  1, -1], norm: [ 0,  0, -1], uv: [0, 0], },
+        { pos: [-1, -1, -1], norm: [ 0,  0, -1], uv: [1, 1], },
+        { pos: [-1,  1, -1], norm: [ 0,  0, -1], uv: [1, 0], },
+        // left
+        { pos: [-1, -1, -1], norm: [-1,  0,  0], uv: [0, 1], },
+        { pos: [-1, -1,  1], norm: [-1,  0,  0], uv: [1, 1], },
+        { pos: [-1,  1, -1], norm: [-1,  0,  0], uv: [0, 0], },
+        
+        { pos: [-1,  1, -1], norm: [-1,  0,  0], uv: [0, 0], },
+        { pos: [-1, -1,  1], norm: [-1,  0,  0], uv: [1, 1], },
+        { pos: [-1,  1,  1], norm: [-1,  0,  0], uv: [1, 0], },
+        // top
+        { pos: [ 1,  1, -1], norm: [ 0,  1,  0], uv: [0, 1], },
+        { pos: [-1,  1, -1], norm: [ 0,  1,  0], uv: [1, 1], },
+        { pos: [ 1,  1,  1], norm: [ 0,  1,  0], uv: [0, 0], },
+        
+        { pos: [ 1,  1,  1], norm: [ 0,  1,  0], uv: [0, 0], },
+        { pos: [-1,  1, -1], norm: [ 0,  1,  0], uv: [1, 1], },
+        { pos: [-1,  1,  1], norm: [ 0,  1,  0], uv: [1, 0], },
+        // bottom
+        { pos: [ 1, -1,  1], norm: [ 0, -1,  0], uv: [0, 1], },
+        { pos: [-1, -1,  1], norm: [ 0, -1,  0], uv: [1, 1], },
+        { pos: [ 1, -1, -1], norm: [ 0, -1,  0], uv: [0, 0], },
+        
+        { pos: [ 1, -1, -1], norm: [ 0, -1,  0], uv: [0, 0], },
+        { pos: [-1, -1,  1], norm: [ 0, -1,  0], uv: [1, 1], },
+        { pos: [-1, -1, -1], norm: [ 0, -1,  0], uv: [1, 0], },
+    ];
 
+    const positions = [];
+    const normals = [];
+    const uvs = [];
+    for (const vertex of vertices) {
+        positions.push(...vertex.pos);
+        normals.push(...vertex.norm);
+        uvs.push(...vertex.uv);
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    const positionNumComponents = 3;
+    const normalNumComponents = 3;
+    const uvNumComponents = 2;
+    geometry.setAttribute(
+        'position', 
+        new THREE.BufferAttribute(new Float32Array(positions), positionNumComponents)
+    );
+    geometry.setAttribute(
+        'normal',
+        new THREE.BufferAttribute(new Float32Array(normals), normalNumComponents)
+    );
+    geometry.setAttribute(
+        'uv',
+        new THREE.BufferAttribute(new Float32Array(uvs), uvNumComponents)
+    );
+    return geometry;
+}
+
+function getPinza(material) {
+    const pinza = new THREE.Mesh(new THREE.BoxGeometry(19, 20, 4, 8), material);
+    // prePinza.position.set(0, 0, 15);
+    pinza.rotateX(Math.PI / 2);
+
+    const pinzaTip = new THREE.Mesh(getPinzaTipGeometry(), material);
+    pinzaTip.position.set(10, 10, 10);
+    pinza.add(pinzaTip);
+    pinzaTip.add( new THREE.AxesHelper(3) );
+
+    return pinza;
 }
 
 
