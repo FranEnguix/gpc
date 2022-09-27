@@ -8,14 +8,13 @@
 // Modulos necesarios
 import * as THREE from "../lib/three.module.js";
 import {GLTFLoader} from "../lib/GLTFLoader.module.js";
+import { OrbitControls } from "../lib/OrbitControls.module.js" 
 
 // Variables estandar
-let renderer, scene, camera;
-let robot;
+let renderer, scene, camera, cameraControls;
 
 // Otras globales
-// let esferaCubo;
-let angulo = 0;
+let robot;
 
 window.addEventListener('load', () => {
     // Acciones
@@ -28,6 +27,8 @@ function instantiateCamera() {
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
     camera.position.set(0, 200, 400);
     camera.lookAt(0, 0, 0);
+
+    cameraControls = new OrbitControls(camera, renderer.domElement);
 }
 
 function init()
@@ -51,8 +52,17 @@ function getBasicMaterial() {
     );
 }
 
+function getSolidMaterial() {
+    return new THREE.MeshBasicMaterial(
+        { color: 'green', wireframe: true }
+    );
+}
+
 function getFloor(material) {
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000, 10, 10), material);
+    const mat = new THREE.MeshBasicMaterial(
+        { color: 'blue', wireframe: true }
+    );
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000, 10, 10), mat);
     floor.rotation.x = -Math.PI/2;
     return floor;
 }
@@ -153,82 +163,117 @@ function getAntebrazo(material) {
 }
 
 function getPinzaTipGeometry() {
-    const vertices = [
-        // front
-        { pos: [-10, -10,  10], norm: [ 0,  0,  1], uv: [0, 1], },
-        { pos: [ 10, -10,  10], norm: [ 0,  0,  1], uv: [1, 1], },
-        { pos: [-10,  10,  10], norm: [ 0,  0,  1], uv: [0, 0], },
+    // const vertices = [
+    //     // front
+    //     { pos: [-10, -10,  10], norm: [ 0,  0,  1], uv: [0, 1], },
+    //     { pos: [ 10, -10,  10], norm: [ 0,  0,  1], uv: [1, 1], },
+    //     { pos: [-10,  10,  10], norm: [ 0,  0,  1], uv: [0, 0], },
         
-        { pos: [-10,  10,  1], norm: [ 0,  0,  1], uv: [0, 0], },
-        { pos: [ 10, -10,  1], norm: [ 0,  0,  1], uv: [1, 1], },
-        { pos: [ 10,  10,  1], norm: [ 0,  0,  1], uv: [1, 0], },
-        // right
-        { pos: [ 1, -1,  1], norm: [ 1,  0,  0], uv: [0, 1], },
-        { pos: [ 1, -1, -1], norm: [ 1,  0,  0], uv: [1, 1], },
-        { pos: [ 1,  1,  1], norm: [ 1,  0,  0], uv: [0, 0], },
+    //     { pos: [-10,  10,  1], norm: [ 0,  0,  1], uv: [0, 0], },
+    //     { pos: [ 10, -10,  1], norm: [ 0,  0,  1], uv: [1, 1], },
+    //     { pos: [ 10,  10,  1], norm: [ 0,  0,  1], uv: [1, 0], },
+    //     // right
+    //     { pos: [ 1, -1,  1], norm: [ 1,  0,  0], uv: [0, 1], },
+    //     { pos: [ 1, -1, -1], norm: [ 1,  0,  0], uv: [1, 1], },
+    //     { pos: [ 1,  1,  1], norm: [ 1,  0,  0], uv: [0, 0], },
         
-        { pos: [ 1,  1,  1], norm: [ 1,  0,  0], uv: [0, 0], },
-        { pos: [ 1, -1, -1], norm: [ 1,  0,  0], uv: [1, 1], },
-        { pos: [ 1,  1, -1], norm: [ 1,  0,  0], uv: [1, 0], },
-        // back
-        { pos: [ 1, -1, -1], norm: [ 0,  0, -1], uv: [0, 1], },
-        { pos: [-1, -1, -1], norm: [ 0,  0, -1], uv: [1, 1], },
-        { pos: [ 1,  1, -1], norm: [ 0,  0, -1], uv: [0, 0], },
+    //     { pos: [ 1,  1,  1], norm: [ 1,  0,  0], uv: [0, 0], },
+    //     { pos: [ 1, -1, -1], norm: [ 1,  0,  0], uv: [1, 1], },
+    //     { pos: [ 1,  1, -1], norm: [ 1,  0,  0], uv: [1, 0], },
+    //     // back
+    //     { pos: [ 1, -1, -1], norm: [ 0,  0, -1], uv: [0, 1], },
+    //     { pos: [-1, -1, -1], norm: [ 0,  0, -1], uv: [1, 1], },
+    //     { pos: [ 1,  1, -1], norm: [ 0,  0, -1], uv: [0, 0], },
         
-        { pos: [ 1,  1, -1], norm: [ 0,  0, -1], uv: [0, 0], },
-        { pos: [-1, -1, -1], norm: [ 0,  0, -1], uv: [1, 1], },
-        { pos: [-1,  1, -1], norm: [ 0,  0, -1], uv: [1, 0], },
-        // left
-        { pos: [-1, -1, -1], norm: [-1,  0,  0], uv: [0, 1], },
-        { pos: [-1, -1,  1], norm: [-1,  0,  0], uv: [1, 1], },
-        { pos: [-1,  1, -1], norm: [-1,  0,  0], uv: [0, 0], },
+    //     { pos: [ 1,  1, -1], norm: [ 0,  0, -1], uv: [0, 0], },
+    //     { pos: [-1, -1, -1], norm: [ 0,  0, -1], uv: [1, 1], },
+    //     { pos: [-1,  1, -1], norm: [ 0,  0, -1], uv: [1, 0], },
+    //     // left
+    //     { pos: [-1, -1, -1], norm: [-1,  0,  0], uv: [0, 1], },
+    //     { pos: [-1, -1,  1], norm: [-1,  0,  0], uv: [1, 1], },
+    //     { pos: [-1,  1, -1], norm: [-1,  0,  0], uv: [0, 0], },
         
-        { pos: [-1,  1, -1], norm: [-1,  0,  0], uv: [0, 0], },
-        { pos: [-1, -1,  1], norm: [-1,  0,  0], uv: [1, 1], },
-        { pos: [-1,  1,  1], norm: [-1,  0,  0], uv: [1, 0], },
-        // top
-        { pos: [ 1,  1, -1], norm: [ 0,  1,  0], uv: [0, 1], },
-        { pos: [-1,  1, -1], norm: [ 0,  1,  0], uv: [1, 1], },
-        { pos: [ 1,  1,  1], norm: [ 0,  1,  0], uv: [0, 0], },
+    //     { pos: [-1,  1, -1], norm: [-1,  0,  0], uv: [0, 0], },
+    //     { pos: [-1, -1,  1], norm: [-1,  0,  0], uv: [1, 1], },
+    //     { pos: [-1,  1,  1], norm: [-1,  0,  0], uv: [1, 0], },
+    //     // top
+    //     { pos: [ 1,  1, -1], norm: [ 0,  1,  0], uv: [0, 1], },
+    //     { pos: [-1,  1, -1], norm: [ 0,  1,  0], uv: [1, 1], },
+    //     { pos: [ 1,  1,  1], norm: [ 0,  1,  0], uv: [0, 0], },
         
-        { pos: [ 1,  1,  1], norm: [ 0,  1,  0], uv: [0, 0], },
-        { pos: [-1,  1, -1], norm: [ 0,  1,  0], uv: [1, 1], },
-        { pos: [-1,  1,  1], norm: [ 0,  1,  0], uv: [1, 0], },
-        // bottom
-        { pos: [ 1, -1,  1], norm: [ 0, -1,  0], uv: [0, 1], },
-        { pos: [-1, -1,  1], norm: [ 0, -1,  0], uv: [1, 1], },
-        { pos: [ 1, -1, -1], norm: [ 0, -1,  0], uv: [0, 0], },
+    //     { pos: [ 1,  1,  1], norm: [ 0,  1,  0], uv: [0, 0], },
+    //     { pos: [-1,  1, -1], norm: [ 0,  1,  0], uv: [1, 1], },
+    //     { pos: [-1,  1,  1], norm: [ 0,  1,  0], uv: [1, 0], },
+    //     // bottom
+    //     { pos: [ 1, -1,  1], norm: [ 0, -1,  0], uv: [0, 1], },
+    //     { pos: [-1, -1,  1], norm: [ 0, -1,  0], uv: [1, 1], },
+    //     { pos: [ 1, -1, -1], norm: [ 0, -1,  0], uv: [0, 0], },
         
-        { pos: [ 1, -1, -1], norm: [ 0, -1,  0], uv: [0, 0], },
-        { pos: [-1, -1,  1], norm: [ 0, -1,  0], uv: [1, 1], },
-        { pos: [-1, -1, -1], norm: [ 0, -1,  0], uv: [1, 0], },
-    ];
+    //     { pos: [ 1, -1, -1], norm: [ 0, -1,  0], uv: [0, 0], },
+    //     { pos: [-1, -1,  1], norm: [ 0, -1,  0], uv: [1, 1], },
+    //     { pos: [-1, -1, -1], norm: [ 0, -1,  0], uv: [1, 0], },
+    // ];
 
-    const positions = [];
-    const normals = [];
-    const uvs = [];
-    for (const vertex of vertices) {
-        positions.push(...vertex.pos);
-        normals.push(...vertex.norm);
-        uvs.push(...vertex.uv);
-    }
+    // const positions = [];
+    // const normals = [];
+    // const uvs = [];
+    // for (const vertex of vertices) {
+    //     positions.push(...vertex.pos);
+    //     normals.push(...vertex.norm);
+    //     uvs.push(...vertex.uv);
+    // }
 
+    // const geometry = new THREE.BufferGeometry();
+    // const positionNumComponents = 3;
+    // const normalNumComponents = 3;
+    // const uvNumComponents = 2;
+    // geometry.setAttribute(
+    //     'position', 
+    //     new THREE.BufferAttribute(new Float32Array(positions), positionNumComponents)
+    // );
+    // geometry.setAttribute(
+    //     'normal',
+    //     new THREE.BufferAttribute(new Float32Array(normals), normalNumComponents)
+    // );
+    // geometry.setAttribute(
+    //     'uv',
+    //     new THREE.BufferAttribute(new Float32Array(uvs), uvNumComponents)
+    // );
     const geometry = new THREE.BufferGeometry();
     const positionNumComponents = 3;
-    const normalNumComponents = 3;
-    const uvNumComponents = 2;
+    const vertices = [
+        10, -9.5, -2,
+        10, -9.5, 2,
+        -10, -9.5, -2,
+        -10, -9.5, 2,
+
+        6, 9.5, -1,
+        6, 9.5, 1,
+        -6, 9.5, -1,
+        -6, 9.5, 1,
+        /*
+        0, 0, 0,
+        19, 8, 0,
+        19, 8, 2,
+        0, 0, 4,
+        19, 12, 2,
+        19, 12, 0,
+        0, 20, 4,
+        0, 20, 0
+        */
+    ];
     geometry.setAttribute(
         'position', 
-        new THREE.BufferAttribute(new Float32Array(positions), positionNumComponents)
+        new THREE.BufferAttribute(new Float32Array(vertices), positionNumComponents)
     );
-    geometry.setAttribute(
-        'normal',
-        new THREE.BufferAttribute(new Float32Array(normals), normalNumComponents)
-    );
-    geometry.setAttribute(
-        'uv',
-        new THREE.BufferAttribute(new Float32Array(uvs), uvNumComponents)
-    );
+    geometry.setIndex([
+        0, 1, 2, 1, 3, 2,   // Back face
+        0, 5, 1, 0, 4, 5,   // Up face
+        3, 7, 2, 7, 6, 2,   // Down face
+        6, 5, 4, 6, 7, 5,   // Front face
+        1, 5, 3, 3, 5, 7,   // Right face
+        2, 4, 0, 2, 6, 4    // Left face
+    ]);
     return geometry;
 }
 
@@ -236,13 +281,15 @@ function getPinza(material) {
     const pinza = new THREE.Mesh(new THREE.BoxGeometry(19, 20, 4, 8), material);
     // prePinza.position.set(0, 0, 15);
     pinza.rotateX(Math.PI / 2);
-
-    const pinzaTip = new THREE.Mesh(getPinzaTipGeometry(), material);
-    pinzaTip.position.set(10, 10, 10);
+    const pinzaTip = getPinzaTip(material);
+    pinzaTip.position.set(0, 19, 0);
     pinza.add(pinzaTip);
-    pinzaTip.add( new THREE.AxesHelper(3) );
-
     return pinza;
+}
+
+function getPinzaTip(material) {
+    const pinzaTip = new THREE.Mesh(getPinzaTipGeometry(), getSolidMaterial());
+    return pinzaTip
 }
 
 
@@ -304,7 +351,8 @@ function loadScene()
 
 function update()
 {
-    angulo += 0.01;
+    cameraControls.update();
+    // angulo += 0.01;
     // esferaCubo.rotation.y = angulo;
 }
 
