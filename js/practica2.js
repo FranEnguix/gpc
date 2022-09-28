@@ -48,21 +48,18 @@ function init()
 
 function getBasicMaterial() {
     return new THREE.MeshBasicMaterial(
-        { color: 'yellow', wireframe: true }
+        { color: 'yellow', wireframe: false }
     );
 }
 
-function getSolidMaterial() {
-    return new THREE.MeshBasicMaterial(
-        { color: 'green', wireframe: true }
+function getNormalMaterial() {
+    return new THREE.MeshNormalMaterial(
+        { color: 'green', wireframe: false, flatShading: true }
     );
 }
 
 function getFloor(material) {
-    const mat = new THREE.MeshBasicMaterial(
-        { color: 'blue', wireframe: true }
-    );
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000, 10, 10), mat);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000, 10, 10), material);
     floor.rotation.x = -Math.PI/2;
     return floor;
 }
@@ -150,10 +147,7 @@ function getAntebrazo(material) {
     const disco = getDisco(material);
     const nervios = getNervios(material);
 
-    const manoMaterial =  new THREE.MeshBasicMaterial(
-        { color: 'red', wireframe: true }
-    );
-    const mano = getMano(manoMaterial);
+    const mano = getMano(material);
 
     antebrazo.add(disco);
     nervios.forEach((nervio) => { antebrazo.add(nervio); });
@@ -288,7 +282,7 @@ function getPinza(material) {
 }
 
 function getPinzaTip(material) {
-    const pinzaTip = new THREE.Mesh(getPinzaTipGeometry(), getSolidMaterial());
+    const pinzaTip = new THREE.Mesh(getPinzaTipGeometry(), getNormalMaterial());
     return pinzaTip
 }
 
@@ -296,7 +290,7 @@ function getPinzaTip(material) {
 function loadScene()
 {
     // Material sencillo
-    const material = getBasicMaterial();
+    const material = getNormalMaterial();
 
     // Robot 
     robot = new THREE.Object3D();
