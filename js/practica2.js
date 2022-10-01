@@ -132,6 +132,7 @@ function getMano(material) {
     const pinzaI = getPinza(material);
     pinzaI.position.set(0, 10, 15);
     const pinzaD = getPinza(material);
+    pinzaD.rotateY(Math.PI);
     pinzaD.position.set(0, -10, 15);
 
     mano.add(pinzaI);
@@ -241,10 +242,10 @@ function getPinzaTipGeometry() {
         -10, -9.5, -2,
         -10, -9.5, 2,
 
-        6, 9.5, -1,
-        6, 9.5, 1,
-        -6, 9.5, -1,
-        -6, 9.5, 1,
+        6, 9.5, 0,
+        6, 9.5, 2,
+        -6, 9.5, 0,
+        -6, 9.5, 2,
         /*
         0, 0, 0,
         19, 8, 0,
@@ -272,7 +273,7 @@ function getPinzaTipGeometry() {
 }
 
 function getPinza(material) {
-    const pinza = new THREE.Mesh(new THREE.BoxGeometry(19, 20, 4, 8), material);
+    const pinza = new THREE.Mesh(new THREE.BoxGeometry(20, 19, 4, 8), material);
     // prePinza.position.set(0, 0, 15);
     pinza.rotateX(Math.PI / 2);
     const pinzaTip = getPinzaTip(material);
