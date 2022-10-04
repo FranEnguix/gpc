@@ -18,11 +18,32 @@ let robot;
 let cameraControls, planta;
 const L = 100;
 
+// Funciones de ventana
 window.addEventListener('load', () => {
     init();
     loadScene();
     render();
 });
+window.addEventListener('resize', updateAspectRatio);
+
+
+
+
+// ----------- FUNCIONES BASICAS -------------
+function init() {
+    // Instanciar el motor de render
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.autoClear = false;
+    renderer.setClearColor(0.5, 0.5, 0.5);
+    document.querySelector('div').appendChild(renderer.domElement);
+
+    // Instanciar el nodo raiz de la escena
+    scene = new THREE.Scene();
+
+    // Instanciar la camara
+    instantiateCamera();
+}
 
 function instantiateCamera() {
     const aspectRatio = window.innerWidth / window.innerHeight;
@@ -33,26 +54,70 @@ function instantiateCamera() {
 
     cameraControls = new OrbitControls(camera, renderer.domElement);
 
-    setCameras(aspectRatio);
-
-    window.addEventListener('resize', updateAspectRatio);
+    setOtherCameras(aspectRatio);
 }
 
-function init() {
-    // Instanciar el motor de render
-    renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.autoClear = false;
-    document.querySelector('div').appendChild(renderer.domElement);
-
-    // Instanciar el nodo raiz de la escena
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0.5, 0.5, 0.5);
-
-    // Instanciar la camara
-    instantiateCamera();
+function setOtherCameras(ar) {
+  if (ar > 1)
+    // Left, right, top, bottom, near, far
+    planta = new THREE.OrthographicCamera(-L*ar, L*ar, L, -L, -10, 10000);
+  else
+    planta = new THREE.OrthographicCamera(-L, L, L/ar, -L/ar, -10, 10000);
+  planta.position.set(0, 400, 0);
+  planta.lookAt(0, 0, 0);
+  planta.up = new THREE.Vector3(0, 1, -1);
 }
 
+function loadScene() {
+    // Material sencillo
+    const material = getNormalMaterial();
+
+    // Robot 
+    robot = getRobot(material);
+    scene.add(robot);
+
+    // Floor
+    scene.add(getFloor(material));
+}
+
+function render() {
+    requestAnimationFrame(render);
+    update();
+
+    renderer.clear();
+
+    // Camara esquina
+    const size = Math.min(window.innerWidth / 4, window.innerHeight / 4);
+    renderer.setViewport(0, window.innerHeight - size, size, size);
+    renderer.render(scene, planta);
+
+    // Camara principal
+    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+    renderer.render(scene, camera);
+}
+
+function update() {
+    cameraControls.update();
+}
+
+function updateAspectRatio() {
+  // Nueva relacion de aspecto de camara
+  const aspectRatio = window.innerWidth / window.innerHeight;
+
+  // Cambiar dimensiones del canvas`
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  // Actualizar perspectiva
+  camera.aspect = aspectRatio;
+  camera.updateProjectionMatrix();
+  planta.updateProjectionMatrix();
+}
+// -------------------------------------------
+
+
+
+
+// -------------- MATERIALES -----------------
 function getBasicMaterial() {
     return new THREE.MeshBasicMaterial(
         { color: 'yellow', wireframe: true }
@@ -64,11 +129,31 @@ function getNormalMaterial() {
         { wireframe: false, flatShading: true }
     );
 }
+// -------------------------------------------
 
+
+
+
+
+// ------------------ SUELO ------------------
 function getFloor(material) {
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000, 10, 10), material);
     floor.rotation.x = -Math.PI/2;
     return floor;
+}
+// -------------------------------------------
+
+
+
+
+// ------------------ ROBOT ------------------
+function getRobot(material) {
+    const rob = new THREE.Object3D();
+    const base = getBase(material);
+
+    // Robot hierarchy
+    rob.add(base);
+    return rob;
 }
 
 function getBase(material) {
@@ -77,6 +162,23 @@ function getBase(material) {
     const brazo = getBrazo(material);
     base.add(brazo);
     return base;
+}
+
+function getBrazo(material) {
+    const brazo = new THREE.Object3D();
+    brazo.position.set(0, 15 / 2, 0);
+
+    const eje = getEje(material);
+    const esparrago = getEsparrago(material);
+    const rotula = getRotula(material);
+    const antebrazo = getAntebrazo(material);
+
+    brazo.add(eje);
+    brazo.add(esparrago);
+    brazo.add(rotula);
+    brazo.add(antebrazo);
+
+    return brazo;
 }
 
 function getEje(material) {
@@ -99,21 +201,20 @@ function getRotula(material) {
     return rotula;
 }
 
-function getBrazo(material) {
-    const brazo = new THREE.Object3D();
-    brazo.position.set(0, 15 / 2, 0);
+function getAntebrazo(material) {
+    const antebrazo = new THREE.Object3D();
+    antebrazo.position.set(0, 120, 0);
 
-    const eje = getEje(material);
-    const esparrago = getEsparrago(material);
-    const rotula = getRotula(material);
-    const antebrazo = getAntebrazo(material);
+    const disco = getDisco(material);
+    const nervios = getNervios(material);
 
-    brazo.add(eje);
-    brazo.add(esparrago);
-    brazo.add(rotula);
-    brazo.add(antebrazo);
+    const mano = getMano(material);
 
-    return brazo;
+    antebrazo.add(disco);
+    nervios.forEach((nervio) => { antebrazo.add(nervio); });
+    antebrazo.add(mano);
+
+    return antebrazo;
 }
 
 function getDisco(material) {
@@ -151,20 +252,18 @@ function getMano(material) {
     return mano;
 }
 
-function getAntebrazo(material) {
-    const antebrazo = new THREE.Object3D();
-    antebrazo.position.set(0, 120, 0);
+function getPinza(material) {
+    const pinza = new THREE.Mesh(new THREE.BoxGeometry(20, 19, 4, 8), material);
+    pinza.rotateX(Math.PI / 2);
+    const pinzaTip = getPinzaTip(material);
+    pinzaTip.position.set(0, 19, 0);
+    pinza.add(pinzaTip);
+    return pinza;
+}
 
-    const disco = getDisco(material);
-    const nervios = getNervios(material);
-
-    const mano = getMano(material);
-
-    antebrazo.add(disco);
-    nervios.forEach((nervio) => { antebrazo.add(nervio); });
-    antebrazo.add(mano);
-
-    return antebrazo;
+function getPinzaTip(material) {
+    const pinzaTip = new THREE.Mesh(getPinzaTipGeometry(), material);
+    return pinzaTip;
 }
 
 function getPinzaTipGeometry() {
@@ -239,93 +338,4 @@ function getPinzaTipGeometry() {
     ]);
     return geometry;
 }
-
-function getPinza(material) {
-    const pinza = new THREE.Mesh(new THREE.BoxGeometry(20, 19, 4, 8), material);
-    pinza.rotateX(Math.PI / 2);
-    const pinzaTip = getPinzaTip(material);
-    pinzaTip.position.set(0, 19, 0);
-    pinza.add(pinzaTip);
-    return pinza;
-}
-
-function getPinzaTip(material) {
-    const pinzaTip = new THREE.Mesh(getPinzaTipGeometry(), material);
-    return pinzaTip;
-}
-
-function getRobot(material) {
-    const rob = new THREE.Object3D();
-    const base = getBase(material);
-
-    // Robot hierarchy
-    rob.add(base);
-
-    return rob;
-}
-
-
-function loadScene() {
-    // Material sencillo
-    const material = getBasicMaterial();
-
-    // Robot 
-    robot = getRobot(material);
-    scene.add(robot);
-
-    // Floor
-    scene.add(getFloor(material));
-}
-
-function update() {
-    cameraControls.update();
-    // angulo += 0.01;
-    // esferaCubo.rotation.y = angulo;
-}
-
-function render() {
-    requestAnimationFrame(render);
-    update();
-
-    renderer.clear();
-
-    // Camara principal
-    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-    renderer.render(scene, camera);
-
-    // Camara esquina
-    renderer.setViewport(0, 0, window.innerHeight / 4, window.innerHeight / 4);
-    renderer.render(scene, planta);
-
-}
-
-function setCameras(ar) {
-  // Camaras ortograficas
-  let camaraOrtografica;
-
-  if (ar > 1)
-    // Left, right, top, bottom, near, far
-    camaraOrtografica = new THREE.OrthographicCamera(-L*ar, L*ar, L, -L, -10, 10000);
-  else
-    camaraOrtografica = new THREE.OrthographicCamera(-L, L, L/ar, -L/ar, -10, 10000);
-
-  planta = camaraOrtografica.clone();
-  planta.position.set(0, 100, 0);
-  planta.lookAt(0, 0, 0);
-  planta.up = new THREE.Vector3(0, 0, -1);
-}
-
-function updateAspectRatio() {
-  // Nueva relacion de aspecto de camara
-  const aspectRatio = window.innerWidth / window.innerHeight;
-
-  // Cambiar dimensiones del canvas`
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
-  // Actualizar perspectiva
-  camera.aspect = aspectRatio;
-  camera.updateProjectionMatrix();
-
-//   planta.aspect = 1
-  planta.updateProjectionMatrix();
-}
+// -------------------------------------------
