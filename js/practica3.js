@@ -1,5 +1,5 @@
 /**
- * Practica 2
+ * Practica 3
  * 
  * @author Francisco Enguix
  * 
@@ -11,31 +11,38 @@ import {GLTFLoader} from "../lib/GLTFLoader.module.js";
 import { OrbitControls } from "../lib/OrbitControls.module.js" 
 
 // Variables estandar
-let renderer, scene, camera, cameraControls;
+let renderer, scene, camera;
 
 // Otras globales
 let robot;
+let cameraControls, planta;
+const L = 100;
 
 window.addEventListener('load', () => {
-    // Acciones
     init();
     loadScene();
     render();
 });
 
 function instantiateCamera() {
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+    const aspectRatio = window.innerWidth / window.innerHeight;
+
+    camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
     camera.position.set(0, 200, 400);
-    camera.lookAt(0, 0, 0);
+    camera.lookAt(0, 1, 0);
 
     cameraControls = new OrbitControls(camera, renderer.domElement);
+
+    setCameras(aspectRatio);
+
+    window.addEventListener('resize', updateAspectRatio);
 }
 
-function init()
-{
+function init() {
     // Instanciar el motor de render
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.autoClear = false;
     document.querySelector('div').appendChild(renderer.domElement);
 
     // Instanciar el nodo raiz de la escena
@@ -48,13 +55,13 @@ function init()
 
 function getBasicMaterial() {
     return new THREE.MeshBasicMaterial(
-        { color: 'yellow', wireframe: false }
+        { color: 'yellow', wireframe: true }
     );
 }
 
 function getNormalMaterial() {
     return new THREE.MeshNormalMaterial(
-        { color: 'green', wireframe: false, flatShading: true }
+        { wireframe: false, flatShading: true }
     );
 }
 
@@ -67,6 +74,8 @@ function getFloor(material) {
 function getBase(material) {
     const base = new THREE.Mesh(new THREE.CylinderGeometry(50, 50, 15, 64), material);
     base.position.set(0, 0, 0);
+    const brazo = getBrazo(material);
+    base.add(brazo);
     return base;
 }
 
@@ -242,39 +251,81 @@ function getPinza(material) {
 
 function getPinzaTip(material) {
     const pinzaTip = new THREE.Mesh(getPinzaTipGeometry(), material);
-    return pinzaTip
+    return pinzaTip;
+}
+
+function getRobot(material) {
+    const rob = new THREE.Object3D();
+    const base = getBase(material);
+
+    // Robot hierarchy
+    rob.add(base);
+
+    return rob;
 }
 
 
-function loadScene()
-{
+function loadScene() {
     // Material sencillo
-    const material = getNormalMaterial();
+    const material = getBasicMaterial();
 
     // Robot 
-    robot = new THREE.Object3D();
-    const base = getBase(material);
-    const brazo = getBrazo(material);
-
-    // Robot hierarchy
-    robot.add(base);
-    base.add(brazo);
+    robot = getRobot(material);
     scene.add(robot);
 
     // Floor
     scene.add(getFloor(material));
 }
 
-function update()
-{
+function update() {
     cameraControls.update();
     // angulo += 0.01;
     // esferaCubo.rotation.y = angulo;
 }
 
-function render()
-{
+function render() {
     requestAnimationFrame(render);
     update();
+
+    renderer.clear();
+
+    // Camara principal
+    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
     renderer.render(scene, camera);
+
+    // Camara esquina
+    renderer.setViewport(0, 0, window.innerHeight / 4, window.innerHeight / 4);
+    renderer.render(scene, planta);
+
+}
+
+function setCameras(ar) {
+  // Camaras ortograficas
+  let camaraOrtografica;
+
+  if (ar > 1)
+    // Left, right, top, bottom, near, far
+    camaraOrtografica = new THREE.OrthographicCamera(-L*ar, L*ar, L, -L, -10, 10000);
+  else
+    camaraOrtografica = new THREE.OrthographicCamera(-L, L, L/ar, -L/ar, -10, 10000);
+
+  planta = camaraOrtografica.clone();
+  planta.position.set(0, 100, 0);
+  planta.lookAt(0, 0, 0);
+  planta.up = new THREE.Vector3(0, 0, -1);
+}
+
+function updateAspectRatio() {
+  // Nueva relacion de aspecto de camara
+  const aspectRatio = window.innerWidth / window.innerHeight;
+
+  // Cambiar dimensiones del canvas`
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  // Actualizar perspectiva
+  camera.aspect = aspectRatio;
+  camera.updateProjectionMatrix();
+
+//   planta.aspect = 1
+  planta.updateProjectionMatrix();
 }
