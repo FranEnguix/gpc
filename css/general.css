@@ -9,7 +9,7 @@ html, body {
     flex-direction: row;
 }
 
-div {
+html > div {
     margin: 0;
     padding: 0;
     width: 100%;

@@ -1,5 +1,5 @@
 /**
- * Practica 3
+ * Practica 4
  * 
  * @author Francisco Enguix
  * 
@@ -9,6 +9,8 @@
 import * as THREE from "../lib/three.module.js";
 import {GLTFLoader} from "../lib/GLTFLoader.module.js";
 import { OrbitControls } from "../lib/OrbitControls.module.js" 
+import { TWEEN } from "../lib/tween.module.min.js"
+import { GUI } from "../lib/lil-gui.module.min.js"
 
 // Variables estandar
 let renderer, scene, camera;
@@ -16,16 +18,19 @@ let renderer, scene, camera;
 // Otras globales
 let robot;
 let cameraControls, planta;
+let gui, animation_panel;
+let speed = 2;
 const L = 100;
 
 // Funciones de ventana
 window.addEventListener('load', () => {
     init();
+    loadGUI();
     loadScene();
     render();
 });
 window.addEventListener('resize', updateAspectRatio);
-
+window.addEventListener('keydown', keydown, true); // envia el evento a keydown antes que a window
 
 
 
@@ -49,9 +54,8 @@ function instantiateCamera() {
     const aspectRatio = window.innerWidth / window.innerHeight;
 
     camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
-    camera.position.set(0, 200, 400);
     camera.position.set(200, 300, 200);
-    camera.lookAt(0, 1, 0);
+    camera.lookAt(0, 10, 0);
 
     cameraControls = new OrbitControls(camera, renderer.domElement);
 
@@ -95,6 +99,16 @@ function render() {
 
 function update() {
     cameraControls.update();
+    TWEEN.update();
+    panelUpdate();
+}
+
+function panelUpdate() {
+    robot.getObjectByName("base").rotation.y = rad(animation_panel.giro_base);
+    robot.getObjectByName("brazo").rotation.z = rad(animation_panel.giro_brazo);
+    robot.getObjectByName("antebrazo").rotation.y = rad(animation_panel.giro_antebrazo_y);
+    robot.getObjectByName("antebrazo").rotation.z = rad(animation_panel.giro_antebrazo_z);
+    robot.getObjectByName("pinza").rotation.y = rad(animation_panel.giro_pinza);
 }
 
 function updateAspectRatio() {
@@ -108,6 +122,84 @@ function updateAspectRatio() {
   camera.aspect = aspectRatio;
   camera.updateProjectionMatrix();
   planta.updateProjectionMatrix();
+}
+
+function loadGUI() {
+    animation_panel = {
+        giro_base: 0,
+        giro_brazo: 0,
+        giro_antebrazo_y: 0,
+        giro_antebrazo_z: 0,
+        giro_pinza: 0,
+        separacion_pinza: 0,
+        alambrico: false,
+        animar: anima
+    }
+
+    gui = new GUI();
+    gui.title("Control Robot");
+    gui.add(animation_panel, "giro_base", -180, 180, 0.025).name("Giro Base");
+    gui.add(animation_panel, "giro_brazo", -45, 45, 0.025).name("Giro Brazo");
+    gui.add(animation_panel, "giro_antebrazo_y", -180, 180, 0.025).name("Giro Antebrazo Y");
+    gui.add(animation_panel, "giro_antebrazo_z", -90, 90, 0.025).name("Giro Antebrazo Z");
+    gui.add(animation_panel, "giro_pinza", -40, 220, 0.025).name("Giro Pinza");
+    gui.add(animation_panel, "separacion_pinza", 0, 15, 0.025).name("Separacion Pinza");
+    gui.add(animation_panel, "alambrico").name("Alambres");
+    gui.add(animation_panel, "animar").name("Anima");
+}
+// -------------------------------------------
+
+
+// ------------ ANIMACIONES ------------------
+function anima() {
+    const giroBase = new TWEEN.Tween(robot.getObjectByName("base").rotation)
+        .to({ y: rad(-130) }, 2000)
+        .onUpdate(v => { animation_panel.giro_base = deg(v.y) });
+    giroBase.start();
+}
+// -------------------------------------------
+
+
+
+// ------------ TECLAS -----------------------
+function keydown(e) {
+    let key = e.key;
+    let captured = true;
+
+    switch(key) {
+        case "ArrowLeft":
+            robot.position.z += speed;
+            break;
+        case "ArrowRight":
+            robot.position.z -= speed;
+            break;
+        case "ArrowUp":
+            robot.position.x -= speed;
+            break;
+        case "ArrowDown":
+            robot.position.x += speed;
+            break;
+        default:
+            captured = false;
+    }
+
+    if (captured)
+        e.preventDefault();
+}
+// -------------------------------------------
+
+
+
+
+
+
+// ------------ FUNCIONES UTILIDAD -----------
+function rad(deg) {
+    return deg * (Math.PI / 180);
+}
+
+function deg(rad) {
+    return rad * (180 / Math.PI); 
 }
 // -------------------------------------------
 
@@ -147,6 +239,7 @@ function getFloor(material) {
 function getRobot(material) {
     const rob = new THREE.Object3D();
     const base = getBase(material);
+    base.name = "base";
 
     // Robot hierarchy
     rob.add(base);
@@ -157,6 +250,7 @@ function getBase(material) {
     const base = new THREE.Mesh(new THREE.CylinderGeometry(50, 50, 15, 64), material);
     base.position.set(0, 0, 0);
     const brazo = getBrazo(material);
+    brazo.name = "brazo";
     base.add(brazo);
     return base;
 }
@@ -180,7 +274,7 @@ function getBrazo(material) {
 
 function getEje(material) {
     const eje = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 18, 64), material);
-    eje.rotateZ(Math.PI / 2);
+    eje.rotation.x = (-Math.PI / 2);
     eje.position.set(0, 0, 0);
     return eje;
 }
@@ -200,12 +294,14 @@ function getRotula(material) {
 
 function getAntebrazo(material) {
     const antebrazo = new THREE.Object3D();
+    antebrazo.name = "antebrazo";
     antebrazo.position.set(0, 120, 0);
 
     const disco = getDisco(material);
     const nervios = getNervios(material);
 
     const mano = getMano(material);
+    mano.name = "mano";
 
     antebrazo.add(disco);
     nervios.forEach((nervio) => { antebrazo.add(nervio); });
@@ -235,24 +331,32 @@ function getNervios(material) {
 function getMano(material) {
     const mano = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 40, 64), material);
     mano.position.set(0, 80 + 6, 0);
-    mano.rotateZ(Math.PI / 2);
+    mano.rotation.x = Math.PI / 2;
+    
 
     const pinzaI = getPinza(material);
-    pinzaI.position.set(0, 10, 15);
+    pinzaI.name = "pinzaI";
+    pinzaI.position.set(15, 10, 0);
     const pinzaD = getPinza(material);
-    pinzaD.rotateY(Math.PI);
-    pinzaD.position.set(0, -10, 15);
+    pinzaD.name = "pinzaD"
+    pinzaD.rotateX(Math.PI);
+    pinzaD.position.set(15, -10, 0);
 
-    mano.add(pinzaI);
-    mano.add(pinzaD);
+    const pinza = new THREE.Object3D();
+    
+    pinza.add(pinzaI);
+    pinza.add(pinzaD);
+    pinza.name = "pinza";
+
+    mano.add(pinza);
     return mano;
 }
 
 function getPinza(material) {
-    const pinza = new THREE.Mesh(new THREE.BoxGeometry(20, 19, 4, 8), material);
-    pinza.rotateX(Math.PI / 2);
+    const pinza = new THREE.Mesh(new THREE.BoxGeometry(19, 20, 4, 8), material);
+    pinza.rotation.x = (Math.PI / 2);
     const pinzaTip = getPinzaTip(material);
-    pinzaTip.position.set(0, 19, 0);
+    pinzaTip.position.set(19, 0, 0);
     pinza.add(pinzaTip);
     return pinza;
 }
@@ -268,41 +372,42 @@ function getPinzaTipGeometry() {
     const normalNumComponents = 3;
     const uvNumComponents = 2;
     const newVertices = [
+
         // Back face
-        { pos: [ 10, -9.5, -2], norm: [0, -1, 0], uv: [0, 0] }, // 0
-        { pos: [ 10, -9.5,  2], norm: [0, -1, 0], uv: [0, 1] }, // 1
-        { pos: [-10, -9.5, -2], norm: [0, -1, 0], uv: [1, 0] }, // 2
-        { pos: [-10, -9.5,  2], norm: [0, -1, 0], uv: [1, 1] }, // 3
+        { pos: [-9.5, -10, 2], norm: [-1, 0, 0], uv: [0, 0] }, // 0
+        { pos: [-9.5, -10, -2], norm: [-1, 0, 0], uv: [0, 1] }, // 1
+        { pos: [-9.5, 10, -2], norm: [-1, 0, 0], uv: [1, 0] }, // 2
+        { pos: [-9.5, 10, 2], norm: [-1, 0, 0], uv: [1, 1] }, // 3
 
         // Top face
-        { pos: [10, -9.5, -2], norm: [1, 0, 0], uv: [0, 0] },   // 4
-        { pos: [10, -9.5,  2], norm: [1, 0, 0], uv: [0, 1] },   // 5
-        { pos: [10,  9.5,  0], norm: [1, 0, 0], uv: [1, 0] },   // 6
-        { pos: [10,  9.5,  2], norm: [1, 0, 0], uv: [1, 1] },   // 7
+        { pos: [-9.5, -10, 2], norm: [0, -1, 0], uv: [0, 0] },   // 4
+        { pos: [-9.5, -10, -2], norm: [0, -1, 0], uv: [0, 1] },   // 5
+        { pos: [9.5, -10, 0], norm: [0, -1, 0], uv: [1, 0] },   // 6
+        { pos: [9.5, -10, 2], norm: [0, -1, 0], uv: [1, 1] },   // 7
 
         // Bottom face
-        { pos: [-10, -9.5, -2], norm: [-1, 0, 0], uv: [0, 0] }, // 8
-        { pos: [-10, -9.5,  2], norm: [-1, 0, 0], uv: [0, 1] }, // 9
-        { pos: [-10,  9.5,  0], norm: [-1, 0, 0], uv: [1, 0] }, // 10
-        { pos: [-10,  9.5,  2], norm: [-1, 0, 0], uv: [1, 1] }, // 11
+        { pos: [-9.5, 10, 2], norm: [0, 1, 0], uv: [0, 0] }, // 8
+        { pos: [-9.5, 10, -2], norm: [0, 1, 0], uv: [0, 1] }, // 9
+        { pos: [9.5,  10,  0], norm: [0, 1, 0], uv: [1, 0] }, // 10
+        { pos: [9.5,  10,  2], norm: [0, 1, 0], uv: [1, 1] }, // 11
 
         // Front face
-        { pos: [10, 9.5, 0], norm: [0, 1, 0], uv: [0, 0] },     // 12
-        { pos: [10, 9.5, 2], norm: [0, 1, 0], uv: [0, 1] },     // 13
-        { pos: [-10, 9.5, 0], norm: [0, 1, 0], uv: [1, 0] },    // 14
-        { pos: [-10, 9.5, 2], norm: [0, 1, 0], uv: [1, 1] },    // 15
+        { pos: [9.5, -10, 2], norm: [1, 0, 0], uv: [0, 0] },     // 12
+        { pos: [9.5, -10, 0], norm: [1, 0, 0], uv: [0, 1] },     // 13
+        { pos: [9.5,  10,  0], norm: [1, 0, 0], uv: [1, 0] },    // 14
+        { pos: [9.5,  10,  2], norm: [1, 0, 0], uv: [1, 1] },    // 15
 
         // Right face
-        { pos: [10, -9.5, 2], norm: [0, 0, 1], uv: [0, 0] },    // 16
-        { pos: [-10, -9.5, 2], norm: [0, 0, 1], uv: [0, 1] },   // 17
-        { pos: [10, 9.5, 2], norm: [0, 0, 1], uv: [1, 0] },     // 18
-        { pos: [-10, 9.5, 2], norm: [0, 0, 1], uv: [1, 1] },    // 19
+        { pos: [-9.5, -10, 2], norm: [0, 0, 1], uv: [0, 0] },    // 16
+        { pos: [-9.5, 10, 2], norm: [0, 0, 1], uv: [0, 1] },   // 17
+        { pos: [9.5, -10, 2], norm: [0, 0, 1], uv: [1, 0] },     // 18
+        { pos: [9.5,  10,  2], norm: [0, 0, 1], uv: [1, 1] },    // 19
 
         // Left face
-        { pos: [10, -9.5, -2], norm: [0, 0, -1], uv: [0, 0] },   // 20
-        { pos: [-10, -9.5, -2], norm: [0, 0, -1], uv: [0, 1] },  // 21
-        { pos: [10, 9.5, 0], norm: [0, 0, -1], uv: [1, 0] },     // 22
-        { pos: [-10, 9.5, 0], norm: [0, 0, -1], uv: [1, 1] },    // 23
+        { pos: [-9.5, -10, -2], norm: [0, 0, -1], uv: [0, 0] },   // 20
+        { pos: [-9.5, 10, -2], norm: [0, 0, -1], uv: [0, 1] },  // 21
+        { pos: [9.5, -10, 0], norm: [0, 0, -1], uv: [1, 0] },     // 22
+        { pos: [9.5,  10,  0], norm: [0, 0, -1], uv: [1, 1] },    // 23
     ];
     const positions = [];
     const normals = [];
@@ -325,12 +430,12 @@ function getPinzaTipGeometry() {
         new THREE.BufferAttribute(new Float32Array(uvs), uvNumComponents)
     );
     geometry.setIndex([
-        0, 1, 2, 1, 3, 2,       // Back face
-        4, 7, 5, 4, 6, 7,       // Top face
-        9, 11, 8, 11, 10, 8,    // Bot face
-        14, 13, 12, 14, 15, 13, // Front face
+        2, 1, 0, 0, 3, 2,       // Back face
+        4, 5, 6, 6, 7, 4,       // Top face
+        10, 9, 8, 8, 11, 10,    // Bot face
+        12, 13, 14, 14, 15, 12, // Front face
         16, 18, 17, 17, 18, 19, // Right face
-        21, 22, 20, 21, 23, 22, // Left face
+        20, 21, 22, 21, 23, 22, // Left face
     ]);
     return geometry;
 }
