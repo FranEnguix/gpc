@@ -64,7 +64,7 @@ function instantiateCamera() {
 
 function setOtherCameras(ar) {
     planta = new THREE.OrthographicCamera(-L, L, L, -L, 10, 10000);
-    planta.position.set(0, 400, 0);
+    planta.position.set(0, 300, 0);
     planta.lookAt(0, 0, 0);
     planta.up = new THREE.Vector3(0, 1, -1);
 }
@@ -81,9 +81,9 @@ function loadScene() {
     scene.add(getFloor(material));
 }
 
-function render() {
+function render(time) {
     requestAnimationFrame(render);
-    update();
+    update(time);
 
     renderer.clear();
 
@@ -97,25 +97,17 @@ function render() {
     renderer.render(scene, camera);
 }
 
-function update() {
+function update(time) {
     cameraControls.update();
-    TWEEN.update();
+    TWEEN.update(time);
     panelUpdate();
-}
-
-function panelUpdate() {
-    robot.getObjectByName("base").rotation.y = rad(animation_panel.giro_base);
-    robot.getObjectByName("brazo").rotation.z = rad(animation_panel.giro_brazo);
-    robot.getObjectByName("antebrazo").rotation.y = rad(animation_panel.giro_antebrazo_y);
-    robot.getObjectByName("antebrazo").rotation.z = rad(animation_panel.giro_antebrazo_z);
-    robot.getObjectByName("pinza").rotation.y = rad(animation_panel.giro_pinza);
 }
 
 function updateAspectRatio() {
   // Nueva relacion de aspecto de camara
   const aspectRatio = window.innerWidth / window.innerHeight;
 
-  // Cambiar dimensiones del canvas`
+  // Cambiar dimensiones del canvas
   renderer.setSize(window.innerWidth, window.innerHeight);
 
   // Actualizar perspectiva
@@ -131,7 +123,7 @@ function loadGUI() {
         giro_antebrazo_y: 0,
         giro_antebrazo_z: 0,
         giro_pinza: 0,
-        separacion_pinza: 0,
+        separacion_pinza: 10,
         alambrico: false,
         animar: anima
     }
@@ -147,14 +139,132 @@ function loadGUI() {
     gui.add(animation_panel, "alambrico").name("Alambres");
     gui.add(animation_panel, "animar").name("Anima");
 }
+
+function panelUpdate() {
+    robot.getObjectByName("base").rotation.y = rad(animation_panel.giro_base);
+    robot.getObjectByName("brazo").rotation.z = rad(animation_panel.giro_brazo);
+    robot.getObjectByName("antebrazo").rotation.y = rad(animation_panel.giro_antebrazo_y);
+    robot.getObjectByName("antebrazo").rotation.z = rad(animation_panel.giro_antebrazo_z);
+    robot.getObjectByName("pinza").rotation.y = rad(animation_panel.giro_pinza);
+    robot.getObjectByName("pinzaI").position.y = animation_panel.separacion_pinza;
+    robot.getObjectByName("pinzaD").position.y = -animation_panel.separacion_pinza;
+    
+    if (animation_panel.alambrico && !isWired(robot)) {
+        changeMaterial(robot, getBasicMaterial()); 
+    } else if (!animation_panel.alambrico && isWired(robot)) {
+        changeMaterial(robot, getNormalMaterial()); 
+    }
+}
+
+function isWired(robot) {
+    return robot.getObjectByName("base").material.wireframe
+} 
+
+function changeMaterial(obj, material) {
+    let stack = [obj];
+    while (stack.length > 0) {
+        let part = stack.pop();
+        if (part.material)
+            part.material = material;
+        if (part.children && part.children.length > 0)
+            part.children.forEach(p => {
+                stack.push(p);
+            });
+    }
+}
 // -------------------------------------------
 
 
 // ------------ ANIMACIONES ------------------
 function anima() {
+    const initialClaps = 5;
+    let turns = 0;
+    let claps = initialClaps;
+
+    const giroBaseFinal = new TWEEN.Tween(robot.getObjectByName("base").rotation)
+    .to({ y: rad(-45) }, 1000)
+    .easing(TWEEN.Easing.Quadratic.In)
+    .onUpdate(v => { animation_panel.giro_base = deg(v.y) });
+
+    const giroBrazoFinal = new TWEEN.Tween(robot.getObjectByName("brazo").rotation)
+    .to({ z: rad(0) }, 1000)
+    .easing(TWEEN.Easing.Quadratic.In)
+    .onUpdate(v => { animation_panel.giro_brazo = deg(v.z) });
+
+    const giroPinzaFinal = new TWEEN.Tween(robot.getObjectByName("pinza").rotation)
+    .to({ y: rad(45) }, 1000)
+    .onUpdate(v => { animation_panel.giro_pinza = deg(v.y) });
+
+    const giroBrazo = new TWEEN.Tween(robot.getObjectByName("brazo").rotation)
+    .to({ z: rad(25) }, 2500)
+    .easing(TWEEN.Easing.Quadratic.In)
+    .onUpdate(v => { animation_panel.giro_brazo = deg(v.z) });
+
+    const giroPinza = new TWEEN.Tween(robot.getObjectByName("pinza").rotation)
+    .to({ y: rad(130) }, 1500)
+    .easing(TWEEN.Easing.Quadratic.In)
+    .onUpdate(v => { animation_panel.giro_pinza = deg(v.y) })
+    .onStart(() => {
+        aplaudir.start();
+    });
+
+    const giroCisne = new TWEEN.Tween(robot.getObjectByName("base").rotation)
+    .to({ y: rad(180) }, 3000)
+    .easing(TWEEN.Easing.Quadratic.In)
+    .onUpdate(v => { animation_panel.giro_base = deg(v.y) })
+    .onStart(() => {
+        giroBrazo.start();
+    });
+
+    const giroCisneInvertido = new TWEEN.Tween(robot.getObjectByName("base").rotation)
+    .to({ y: rad(-180) }, 3000)
+    .easing(TWEEN.Easing.Quadratic.In)
+    .onUpdate(v => { animation_panel.giro_base = deg(v.y) })
+    .onComplete(() => {
+        giroBaseFinal.start();
+    });
+
     const giroBase = new TWEEN.Tween(robot.getObjectByName("base").rotation)
-        .to({ y: rad(-130) }, 2000)
-        .onUpdate(v => { animation_panel.giro_base = deg(v.y) });
+    .to({ y: rad(-45) }, 500)
+    .onUpdate(v => { animation_panel.giro_base = deg(v.y) });
+
+    const giroAntebrazoZ = new TWEEN.Tween(robot.getObjectByName("antebrazo").rotation)
+    .to({ z: rad(-65) }, 1000)
+    .onUpdate(v => { animation_panel.giro_antebrazo_z = deg(v.z) })
+    .onStart(() => { giroPinzaZ.start() });
+
+    const giroPinzaZ = new TWEEN.Tween(robot.getObjectByName("pinza").rotation)
+    .to({ y: rad(90) }, 1000)
+    .onUpdate(v => { animation_panel.giro_pinza = deg(v.y) });
+
+    const aplaudir = new TWEEN.Tween(robot.getObjectByName("pinzaI").position)
+    .to({ y: 2 }, 400)
+    .onUpdate(v => { animation_panel.separacion_pinza = v.y })
+    .easing(TWEEN.Easing.Back.In)
+    .onComplete(() => {claps -= 1; desaplaudir.start()});
+
+    const desaplaudir = new TWEEN.Tween(robot.getObjectByName("pinzaI").position)
+    .to({ y: 10 }, 600)
+    .onUpdate(v => { animation_panel.separacion_pinza = v.y })
+    .easing(TWEEN.Easing.Back.Out)
+    .onComplete(() => {
+        if (claps > 0)
+            aplaudir.start();
+        else { 
+            if (turns++ == 0)
+                giroCisne.start();
+            else {
+                giroPinzaFinal.start();
+                giroPinzaFinal.chain(giroBrazoFinal);
+            }
+            claps = initialClaps; 
+        }
+    });
+    
+    giroBase.chain(giroAntebrazoZ);
+    giroAntebrazoZ.chain(aplaudir);
+    giroCisne.chain(giroCisneInvertido);
+    giroBrazo.chain(giroPinza);
     giroBase.start();
 }
 // -------------------------------------------
@@ -183,8 +293,11 @@ function keydown(e) {
             captured = false;
     }
 
-    if (captured)
+    if (captured) {
         e.preventDefault();
+        planta.position.x = robot.position.x;
+        planta.position.z = robot.position.z;
+    }
 }
 // -------------------------------------------
 
