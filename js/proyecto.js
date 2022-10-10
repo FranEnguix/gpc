@@ -17,14 +17,14 @@ import { FlyControls } from "../lib/FlyControls.js";
 let renderer, scene, camera;
 
 // Otras globales
-let loader, mixer, bat;
+let loader, mixer, bat, moth, city;
 let light;
 let clock, delta, interval;
 let cameraControls, planta;
 let flyControl, moveVector;
 let gui, animation_panel;
 let speed = 2;
-const L = 100;
+const L = 5000;
 
 // Funciones de ventana
 window.addEventListener('load', () => {
@@ -36,7 +36,7 @@ window.addEventListener('load', () => {
     render();
 });
 window.addEventListener('resize', updateAspectRatio);
-// window.addEventListener('keydown', keydown, true); // envia el evento a keydown antes que a window
+window.addEventListener('keydown', keydown, true); // envia el evento a keydown antes que a window
 
 
 
@@ -50,7 +50,7 @@ function init() {
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.autoClear = false;
-    renderer.setClearColor(0.5, 0.5, 0.5);
+    renderer.setClearColor(0.16, 0.16, 0.16);
     document.querySelector('div').appendChild(renderer.domElement);
 
     // Instanciar el nodo raiz de la escena
@@ -60,18 +60,18 @@ function init() {
     instantiateCamera();
 
     flyControl = new FlyControls(camera, renderer.domElement);
-    flyControl.autoForward=true;
+    flyControl.autoForward = false;
     flyControl.movementSpeed = 50;
-    flyControl.rollSpeed = 0.5;
+    flyControl.rollSpeed = 0.05;
     flyControl.dragToLook = true;
 }
 
 function instantiateCamera() {
     const aspectRatio = window.innerWidth / window.innerHeight;
 
-    camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 10000);
-    camera.position.set(10, 15, 10);
-    camera.lookAt(0, 10, 0);
+    camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 100000);
+    camera.position.set(90, 518, 1670);
+    camera.lookAt(90, 518, 1670);
 
     // cameraControls = new OrbitControls(camera, renderer.domElement);
 
@@ -80,7 +80,7 @@ function instantiateCamera() {
 
 function setOtherCameras(ar) {
     planta = new THREE.OrthographicCamera(-L, L, L, -L, 10, 10000);
-    planta.position.set(0, 300, 0);
+    planta.position.set(0, 3000, 0);
     planta.lookAt(0, 0, 0);
     planta.up = new THREE.Vector3(0, 1, -1);
 }
@@ -100,8 +100,12 @@ function loadScene() {
     {
         let batClip;
         bat = gltf.scene;
-        bat.position.set(0, 10, 0);
-        bat.rotation.y = Math.PI / 2;
+        bat.position.set(
+            camera.position.x, 
+            camera.position.y, 
+            camera.position.z + 2
+        );
+        // bat.rotation.y = Math.PI / 2;
         mixer = new THREE.AnimationMixer(bat);
         gltf.animations.forEach( (clip) => {
             batClip = mixer.clipAction(clip);
@@ -111,16 +115,34 @@ function loadScene() {
         scene.add(bat);
     });
 
-    const pointLight = new THREE.PointLight(0xffffff, 1);
-    pointLight.position.set(0, 15, 0);
-    scene.add(pointLight);
+    // Ciudad
+    // loader = new GLTFLoader();
+    loader.load('models/city/scene.gltf',
+    function(gltf)
+    {
+        // let cityClip;
+        city = gltf.scene;
+        city.position.set(0, 0, 0);
+        // city.rotation.y = Math.PI / 2;
+        // mixer = new THREE.AnimationMixer(city);
+        // gltf.animations.forEach( (clip) => {
+        //     cityClip = mixer.clipAction(clip);
+        // });
+        // cityClip.timeScale = 2;
+        // cityClip.play();
+        scene.add(city);
+    });
+
+    // const pointLight = new THREE.PointLight(0xffffff, 1);
+    // pointLight.position.set(0, 15, 0);
+    // scene.add(pointLight);
 
     // Floor
-    scene.add(getFloor(material));
+    // scene.add(getFloor(material));
 }
 
 function addLights() {
-    light = new THREE.AmbientLight(0x404040); // soft white light
+    light = new THREE.AmbientLight(0xffffff); // soft white light
     scene.add(light);
 }
 
@@ -149,11 +171,20 @@ function update(time) {
             // camera.lookAt(bat.position.x, bat.position.y + 2, bat.position.z);
             // camera.position.set(bat.position.x, bat.position.y + 2, bat.position.z + 6);
             mixer.update(1 / 250);
-            flyControl.update(1 / 250);
+
+            
+            
             delta = 0;  
         }
     }
-    
+    if (bat) {
+        bat.position.set(
+            camera.position.x, 
+            camera.position.y, 
+            camera.position.z - 2
+        );
+    }
+    flyControl.update(0.5);
     TWEEN.update(time);
     // panelUpdate();
 }
@@ -198,6 +229,9 @@ function keydown(e) {
     let captured = true;
 
     switch(key) {
+        case " ":
+            console.log(camera.position);
+            break;
         case "ArrowLeft":
             break;
         case "ArrowRight":
@@ -207,6 +241,7 @@ function keydown(e) {
         case "ArrowDown":
             break;
         default:
+            console.log(key);
             captured = false;
     }
 
