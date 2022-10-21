@@ -95,16 +95,20 @@ function loadScene() {
     // Pointer
     pointer = new THREE.Object3D();
     ball = new THREE.Mesh(new THREE.SphereGeometry(5, 32, 32), material);
-    // ball.position.set(0,0,0);
     pointer.position.set(0,0,0);
+    
+    ball.position.x = 0;
+    ball.position.y = 0;
+    ball.position.z = -155;
     pointer.add(ball);
+    camera.add(pointer);
     // pointer.position.x = 0;
     // pointer.position.y = 0;
     // pointer.position.z = -155;
 
-    pointer.position.x = 0;
-    pointer.position.y = 0;
-    pointer.position.z = 0;
+    // pointer.position.x = 0;
+    // pointer.position.y = 0;
+    // pointer.position.z = 0;
 
     // Morcielago
     loader = new GLTFLoader();
@@ -133,16 +137,11 @@ function loadScene() {
 		batModel.position.y = -0.4;
 		batModel.position.z = -0.4;
 
-        ball.position.x = 0;
-        ball.position.y = 0;
-        ball.position.z = -155;
-
         batClip.timeScale = 0.5;
         batClip.play();
 		bat.add(batModel);
 		
         camera.add(bat);
-        camera.add(pointer);
         // scene.add(bat);
     });
 
@@ -204,11 +203,15 @@ function update() {
 		flyControl.update(delta);
 
 
+        let ballWorld = new THREE.Vector3();
+        ball.getWorldPosition(ballWorld);
+        let direction = new THREE.Vector3();
+        direction.subVectors(ballWorld, camera.position).normalize();
+        // console.log(direction);
         // const frontOfBat = new THREE.Vector3(bat.position.x, bat.position.y, bat.position.z);
         // const batWorld = bat.position.getWorldPosition(new THREE.Vector3());
         // const ballWorld = ball.position.getWorldPosition(new THREE.Vector3());
-        console.log(bat.position)
-        const raycaster = new THREE.Raycaster(batWorld, ballWorld, 1, 100);
+        const raycaster = new THREE.Raycaster(camera.position, direction, 1, 100);
         const intersects = raycaster.intersectObjects(scene.children);
         for ( let i = 0; i < intersects.length; i ++ ) {
             console.log("interse");
