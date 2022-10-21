@@ -26,6 +26,8 @@ let gui, animation_panel;
 let speed = 2;
 const L = 5000;
 
+let debugMode = false;
+
 // Funciones de ventana
 window.addEventListener('load', () => {
     init();
@@ -34,6 +36,8 @@ window.addEventListener('load', () => {
     // Lights
     addLights();
     render();
+    // Debug
+    updateDebugOptions(debugMode);
 });
 window.addEventListener('resize', updateAspectRatio);
 window.addEventListener('keydown', keydown, true); // envia el evento a keydown antes que a window
@@ -58,12 +62,7 @@ function init() {
 
     // Instanciar la camara
     instantiateCamera();
-
-    flyControl = new FlyControls(camera, renderer.domElement);
-    flyControl.autoForward = false;
-    flyControl.movementSpeed = 2500;
-    flyControl.rollSpeed = 0.8;
-    flyControl.dragToLook = true;
+    initFlightControls(camera);
 }
 
 function instantiateCamera() {
@@ -74,7 +73,15 @@ function instantiateCamera() {
     camera.lookAt(90, 518, 1670);
     scene.add(camera);
 
-    setOtherCameras(aspectRatio);
+    // setOtherCameras(aspectRatio);
+}
+
+function initFlightControls(camera) {
+    flyControl = new FlyControls(camera, renderer.domElement);
+    flyControl.autoForward = false;
+    flyControl.movementSpeed = 2500;
+    flyControl.rollSpeed = 0.8;
+    flyControl.dragToLook = true;
 }
 
 function setOtherCameras(ar) {
@@ -85,44 +92,35 @@ function setOtherCameras(ar) {
 }
 
 function loadScene() {
+    loader = new GLTFLoader();
+
+    // Pointer for raycast obstacles
+    loadPointer();
+    loadBat();
+    loadCity();    
+}
+
+function loadPointer() {
     // Material sencillo
     const material = getNormalMaterial();
 
-    // Robot 
-    // robot = getRobot(material);
-    // scene.add(robot);
-
-    // Pointer
     pointer = new THREE.Object3D();
     ball = new THREE.Mesh(new THREE.SphereGeometry(5, 32, 32), material);
     pointer.position.set(0,0,0);
-    
+
     ball.position.x = 0;
     ball.position.y = 0;
     ball.position.z = -155;
     pointer.add(ball);
     camera.add(pointer);
-    // pointer.position.x = 0;
-    // pointer.position.y = 0;
-    // pointer.position.z = -155;
+}
 
-    // pointer.position.x = 0;
-    // pointer.position.y = 0;
-    // pointer.position.z = 0;
-
-    // Morcielago
-    loader = new GLTFLoader();
+function loadBat() {
     loader.load('models/bat/scene.gltf',
     function(gltf)
     {
         let batClip;
-		bat = new THREE.Object3D();
-        // pointer.position.z = -1;
-		// bat.position.set(
-        //     camera.position.x, 
-        //     camera.position.y, 
-        //     camera.position.z,
-        // );
+        bat = new THREE.Object3D();
         bat.position.set(
             0,0,0
         );
@@ -133,42 +131,27 @@ function loadScene() {
         gltf.animations.forEach( (clip) => {
             batClip = mixer.clipAction(clip);
         });
-		batModel.position.x = 0;
-		batModel.position.y = -0.4;
-		batModel.position.z = -0.4;
+        batModel.position.x = 0;
+        batModel.position.y = -0.4;
+        batModel.position.z = -0.4;
 
         batClip.timeScale = 0.5;
         batClip.play();
-		bat.add(batModel);
-		
+        bat.add(batModel);
+        
         camera.add(bat);
-        // scene.add(bat);
     });
+}
 
+function loadCity() {
     // Ciudad
-    // loader = new GLTFLoader();
     loader.load('models/city/scene.gltf',
     function(gltf)
     {
-        // let cityClip;
         city = gltf.scene;
         city.position.set(0, 0, 0);
-        // city.rotation.y = Math.PI / 2;
-        // mixer = new THREE.AnimationMixer(city);
-        // gltf.animations.forEach( (clip) => {
-        //     cityClip = mixer.clipAction(clip);
-        // });
-        // cityClip.timeScale = 2;
-        // cityClip.play();
         scene.add(city);
     });
-
-    // const pointLight = new THREE.PointLight(0xffffff, 1);
-    // pointLight.position.set(0, 15, 0);
-    // scene.add(pointLight);
-
-    // Floor
-    // scene.add(getFloor(material));
 }
 
 function addLights() {
@@ -183,9 +166,9 @@ function render() {
     renderer.clear();
 
     // Camara esquina
-    const size = Math.min(window.innerWidth / 4, window.innerHeight / 4);
-    renderer.setViewport(0, window.innerHeight - size, size, size);
-    renderer.render(scene, planta);
+    // const size = Math.min(window.innerWidth / 4, window.innerHeight / 4);
+    // renderer.setViewport(0, window.innerHeight - size, size, size);
+    // renderer.render(scene, planta);
 
     // Camara principal
     renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
@@ -195,39 +178,11 @@ function render() {
 function update() {
     delta = clock.getDelta();
 	if (bat) {
-		planta.position.set(bat.position.x, bat.position.y + 10, bat.position.z);
-		// camera.lookAt(bat.position.x, bat.position.y + 2, bat.position.z);
-		// camera.position.set(bat.position.x, bat.position.y + 2, bat.position.z + 6);
 		// mixer.update(1 / 250);
 		mixer.update(delta);
 		flyControl.update(delta);
 
-
-        let ballWorld = new THREE.Vector3();
-        ball.getWorldPosition(ballWorld);
-        let direction = new THREE.Vector3();
-        direction.subVectors(ballWorld, camera.position).normalize();
-        // console.log(direction);
-        // const frontOfBat = new THREE.Vector3(bat.position.x, bat.position.y, bat.position.z);
-        // const batWorld = bat.position.getWorldPosition(new THREE.Vector3());
-        // const ballWorld = ball.position.getWorldPosition(new THREE.Vector3());
-        const raycaster = new THREE.Raycaster(camera.position, direction, 1, 100);
-        const intersects = raycaster.intersectObjects(scene.children);
-        for ( let i = 0; i < intersects.length; i ++ ) {
-            console.log("interse");
-            const distance = camera.position.distanceTo(intersects[i].object.position);
-            if (distance < 10000)
-                intersects[i].object.material.color.set( 0xff0000 );
-        }
-
-
-        // bat.position.set(
-        //     camera.position.x, 
-        //     camera.position.y, 
-        //     camera.position.z
-        // );
-		// camera.lookAt
-        // worldPos.setFromMatrixPosition( bat.matrixWorld );
+        collisionDetect();
     }
     
     TWEEN.update(delta);
@@ -244,7 +199,6 @@ function updateAspectRatio() {
   // Actualizar perspectiva
   camera.aspect = aspectRatio;
   camera.updateProjectionMatrix();
-  planta.updateProjectionMatrix();
 }
 
 function changeMaterial(obj, material) {
@@ -258,6 +212,28 @@ function changeMaterial(obj, material) {
                 stack.push(p);
             });
     }
+}
+
+function collisionDetect() {
+    let ballWorld = new THREE.Vector3();
+    ball.getWorldPosition(ballWorld);
+    let direction = new THREE.Vector3();
+    direction.subVectors(ballWorld, camera.position).normalize();
+    const raycaster = new THREE.Raycaster(camera.position, direction, 1, 100);
+    const intersects = raycaster.intersectObjects(scene.children);
+    for ( let i = 0; i < intersects.length; i ++ ) {
+        console.log("interse");
+        intersects[i].object.material.color.set( 0xff0000 );
+    }
+}
+
+function updateDebugOptions(debugMode) {
+    if (ball)
+        ball.visible = debugMode;
+}
+
+function initGame() {
+
 }
 // -------------------------------------------
 
@@ -275,16 +251,12 @@ function keydown(e) {
 
     switch(key) {
         case " ":
+            ball.visible = !ball.visible;
             console.log("camera", camera.position);
             break;
-        case "ArrowLeft":
-			camera.position.x += 5;
-            break;
-        case "ArrowRight":
-            break;
-        case "ArrowUp":
-            break;
-        case "ArrowDown":
+        case "F3":
+            debugMode = !debugMode;
+            updateDebugOptions();
             break;
         default:
             console.log(key);
@@ -292,7 +264,7 @@ function keydown(e) {
     }
 
     if (captured) {
-        // e.preventDefault();
+        e.preventDefault();
     }
 }
 // -------------------------------------------
