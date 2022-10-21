@@ -17,7 +17,7 @@ import { FlyControls } from "../lib/FlyControls.js";
 let renderer, scene, camera;
 
 // Otras globales
-let loader, mixer, bat, moth, city;
+let loader, mixer, bat, batModel, moth, city, pointer, ball;
 let light;
 let clock, delta, interval;
 let cameraControls, planta;
@@ -93,7 +93,15 @@ function loadScene() {
     // scene.add(robot);
 
     // Pointer
-    const pointer = new THREE.Mesh(new THREE.SphereGeometry(2000, 32, 32), material);
+    pointer = new THREE.Object3D();
+    ball = new THREE.Mesh(new THREE.SphereGeometry(5, 32, 32), material);
+    // ball.position.set(0,0,0);
+    pointer.position.set(0,0,0);
+    pointer.add(ball);
+    // pointer.position.x = 0;
+    // pointer.position.y = 0;
+    // pointer.position.z = -155;
+
     pointer.position.x = 0;
     pointer.position.y = 0;
     pointer.position.z = 0;
@@ -105,6 +113,7 @@ function loadScene() {
     {
         let batClip;
 		bat = new THREE.Object3D();
+        // pointer.position.z = -1;
 		// bat.position.set(
         //     camera.position.x, 
         //     camera.position.y, 
@@ -114,7 +123,7 @@ function loadScene() {
             0,0,0
         );
 
-        const batModel = gltf.scene;
+        batModel = gltf.scene;
         batModel.rotation.y = Math.PI / 2;
         mixer = new THREE.AnimationMixer(batModel);
         gltf.animations.forEach( (clip) => {
@@ -124,11 +133,16 @@ function loadScene() {
 		batModel.position.y = -0.4;
 		batModel.position.z = -0.4;
 
+        ball.position.x = 0;
+        ball.position.y = 0;
+        ball.position.z = -155;
+
         batClip.timeScale = 0.5;
         batClip.play();
 		bat.add(batModel);
 		
         camera.add(bat);
+        camera.add(pointer);
         // scene.add(bat);
     });
 
@@ -188,6 +202,22 @@ function update() {
 		// mixer.update(1 / 250);
 		mixer.update(delta);
 		flyControl.update(delta);
+
+
+        // const frontOfBat = new THREE.Vector3(bat.position.x, bat.position.y, bat.position.z);
+        // const batWorld = bat.position.getWorldPosition(new THREE.Vector3());
+        // const ballWorld = ball.position.getWorldPosition(new THREE.Vector3());
+        console.log(bat.position)
+        const raycaster = new THREE.Raycaster(batWorld, ballWorld, 1, 100);
+        const intersects = raycaster.intersectObjects(scene.children);
+        for ( let i = 0; i < intersects.length; i ++ ) {
+            console.log("interse");
+            const distance = camera.position.distanceTo(intersects[i].object.position);
+            if (distance < 10000)
+                intersects[i].object.material.color.set( 0xff0000 );
+        }
+
+
         // bat.position.set(
         //     camera.position.x, 
         //     camera.position.y, 
@@ -197,7 +227,7 @@ function update() {
         // worldPos.setFromMatrixPosition( bat.matrixWorld );
     }
     
-    TWEEN.update();
+    TWEEN.update(delta);
     // panelUpdate();
 }
 
@@ -242,7 +272,7 @@ function keydown(e) {
 
     switch(key) {
         case " ":
-            console.log(camera.position);
+            console.log("camera", camera.position);
             break;
         case "ArrowLeft":
 			camera.position.x += 5;
