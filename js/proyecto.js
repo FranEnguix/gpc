@@ -72,8 +72,7 @@ function instantiateCamera() {
     camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 100000);
     camera.position.set(90, 518, 1670);
     camera.lookAt(90, 518, 1670);
-
-    // cameraControls = new OrbitControls(camera, renderer.domElement);
+    scene.add(camera);
 
     setOtherCameras(aspectRatio);
 }
@@ -93,6 +92,12 @@ function loadScene() {
     // robot = getRobot(material);
     // scene.add(robot);
 
+    // Pointer
+    const pointer = new THREE.Mesh(new THREE.SphereGeometry(2000, 32, 32), material);
+    pointer.position.x = 0;
+    pointer.position.y = 0;
+    pointer.position.z = 0;
+
     // Morcielago
     loader = new GLTFLoader();
     loader.load('models/bat/scene.gltf',
@@ -100,10 +105,13 @@ function loadScene() {
     {
         let batClip;
 		bat = new THREE.Object3D();
-		bat.position.set(
-            camera.position.x, 
-            camera.position.y, 
-            camera.position.z,
+		// bat.position.set(
+        //     camera.position.x, 
+        //     camera.position.y, 
+        //     camera.position.z,
+        // );
+        bat.position.set(
+            0,0,0
         );
 
         const batModel = gltf.scene;
@@ -120,8 +128,8 @@ function loadScene() {
         batClip.play();
 		bat.add(batModel);
 		
-
-        scene.add(bat);
+        camera.add(bat);
+        // scene.add(bat);
     });
 
     // Ciudad
@@ -180,13 +188,13 @@ function update() {
 		// mixer.update(1 / 250);
 		mixer.update(delta);
 		flyControl.update(delta);
-        bat.position.set(
-            camera.position.x, 
-            camera.position.y, 
-            camera.position.z
-        );
-		camera.lookAt
-		// bat.rotation.y += 1 / 100;
+        // bat.position.set(
+        //     camera.position.x, 
+        //     camera.position.y, 
+        //     camera.position.z
+        // );
+		// camera.lookAt
+        // worldPos.setFromMatrixPosition( bat.matrixWorld );
     }
     
     TWEEN.update();
