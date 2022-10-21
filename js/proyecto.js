@@ -61,8 +61,8 @@ function init() {
 
     flyControl = new FlyControls(camera, renderer.domElement);
     flyControl.autoForward = false;
-    flyControl.movementSpeed = 50;
-    flyControl.rollSpeed = 0.05;
+    flyControl.movementSpeed = 2500;
+    flyControl.rollSpeed = 0.8;
     flyControl.dragToLook = true;
 }
 
@@ -99,19 +99,28 @@ function loadScene() {
     function(gltf)
     {
         let batClip;
-        bat = gltf.scene;
-        bat.position.set(
+		bat = new THREE.Object3D();
+		bat.position.set(
             camera.position.x, 
             camera.position.y, 
-            camera.position.z + 2
+            camera.position.z,
         );
-        // bat.rotation.y = Math.PI / 2;
-        mixer = new THREE.AnimationMixer(bat);
+
+        const batModel = gltf.scene;
+        batModel.rotation.y = Math.PI / 2;
+        mixer = new THREE.AnimationMixer(batModel);
         gltf.animations.forEach( (clip) => {
             batClip = mixer.clipAction(clip);
         });
-        batClip.timeScale = 2;
+		batModel.position.x = 0;
+		batModel.position.y = -0.4;
+		batModel.position.z = -0.4;
+
+        batClip.timeScale = 0.5;
         batClip.play();
+		bat.add(batModel);
+		
+
         scene.add(bat);
     });
 
@@ -146,9 +155,9 @@ function addLights() {
     scene.add(light);
 }
 
-function render(time) {
+function render() {
     requestAnimationFrame(render);
-    update(time);
+    update();
 
     renderer.clear();
 
@@ -162,30 +171,25 @@ function render(time) {
     renderer.render(scene, camera);
 }
 
-function update(time) {
-    delta += clock.getDelta();
-    if (delta > interval) {
-        // cameraControls.update();
-        if (bat) {
-            planta.position.set(bat.position.x, bat.position.y + 10, bat.position.z);
-            // camera.lookAt(bat.position.x, bat.position.y + 2, bat.position.z);
-            // camera.position.set(bat.position.x, bat.position.y + 2, bat.position.z + 6);
-            mixer.update(1 / 250);
-
-            
-            
-            delta = 0;  
-        }
-    }
-    if (bat) {
+function update() {
+    delta = clock.getDelta();
+	if (bat) {
+		planta.position.set(bat.position.x, bat.position.y + 10, bat.position.z);
+		// camera.lookAt(bat.position.x, bat.position.y + 2, bat.position.z);
+		// camera.position.set(bat.position.x, bat.position.y + 2, bat.position.z + 6);
+		// mixer.update(1 / 250);
+		mixer.update(delta);
+		flyControl.update(delta);
         bat.position.set(
             camera.position.x, 
             camera.position.y, 
-            camera.position.z - 2
+            camera.position.z
         );
+		camera.lookAt
+		// bat.rotation.y += 1 / 100;
     }
-    flyControl.update(0.5);
-    TWEEN.update(time);
+    
+    TWEEN.update();
     // panelUpdate();
 }
 
@@ -233,6 +237,7 @@ function keydown(e) {
             console.log(camera.position);
             break;
         case "ArrowLeft":
+			camera.position.x += 5;
             break;
         case "ArrowRight":
             break;
