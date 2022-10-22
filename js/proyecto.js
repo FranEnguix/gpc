@@ -17,11 +17,11 @@ import { FlyControls } from "../lib/FlyControls.js";
 let renderer, scene, camera;
 
 // Otras globales
-let loader, mixer, bat, batModel, moth, city, pointer, ball;
+let loader, mixer, mothMixers;
+let bat, batModel, moths, city, pointer, ball;
 let light;
 let clock, delta, interval;
-let cameraControls, planta;
-let flyControl, moveVector;
+let flyControl;
 let gui, animation_panel;
 let speed = 2;
 const L = 5000;
@@ -68,27 +68,20 @@ function init() {
 function instantiateCamera() {
     const aspectRatio = window.innerWidth / window.innerHeight;
 
-    camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 100000);
-    camera.position.set(90, 518, 1670);
-    camera.lookAt(90, 518, 1670);
+    camera = new THREE.PerspectiveCamera(35, aspectRatio, 0.1, 100000);
+    // camera.position.set(90, 518, 1670);
+    // camera.lookAt(90, 518, 1670);
+    camera.position.set(0, 10, 0);
+    camera.lookAt(0, 10, 0);
     scene.add(camera);
-
-    // setOtherCameras(aspectRatio);
 }
 
 function initFlightControls(camera) {
     flyControl = new FlyControls(camera, renderer.domElement);
     flyControl.autoForward = false;
-    flyControl.movementSpeed = 2500;
+    flyControl.movementSpeed = 250;
     flyControl.rollSpeed = 0.8;
     flyControl.dragToLook = true;
-}
-
-function setOtherCameras(ar) {
-    planta = new THREE.OrthographicCamera(-L, L, L, -L, 10, 10000);
-    planta.position.set(0, 3000, 0);
-    planta.lookAt(0, 0, 0);
-    planta.up = new THREE.Vector3(0, 1, -1);
 }
 
 function loadScene() {
@@ -97,7 +90,8 @@ function loadScene() {
     // Pointer for raycast obstacles
     loadPointer();
     loadBat();
-    loadCity();    
+    loadCity();
+    loadMoths();
 }
 
 function loadPointer() {
@@ -132,8 +126,9 @@ function loadBat() {
             batClip = mixer.clipAction(clip);
         });
         batModel.position.x = 0;
-        batModel.position.y = -0.4;
-        batModel.position.z = -0.4;
+        batModel.position.y = -0.12;
+        batModel.position.z = -0.24;
+        batModel.scale.set(0.3, 0.3, 0.3);
 
         batClip.timeScale = 0.5;
         batClip.play();
@@ -149,8 +144,38 @@ function loadCity() {
     function(gltf)
     {
         city = gltf.scene;
+        city.scale.set(0.1, 0.1, 0.1);
         city.position.set(0, 0, 0);
         scene.add(city);
+    });
+}
+
+function loadMoths() {
+    moths = []
+    mothMixers = []
+    loadMoth();
+}
+
+function loadMoth() {
+    // Polilla
+    loader.load('models/moth/scene.gltf',
+    function(gltf)
+    {
+        let moth = gltf.scene;
+        moth.name = "moth";
+        let mothClip = null;
+        let mothMixer = new THREE.AnimationMixer(moth);
+        mothClip = mothMixer.clipAction(gltf.animations[1]);
+        moth.scale.set(0.005, 0.005, 0.005);
+        mothClip.timeScale = 1;
+        mothClip.play();
+        mothMixers.push(mothMixer);
+        moth.position.x = camera.position.x + 40;
+        moth.position.y = camera.position.y + 20;
+        moth.position.z = camera.position.z + 40;
+        scene.add(moth);
+        console.log(moth);
+        moths.push(moth);
     });
 }
 
@@ -180,9 +205,13 @@ function update() {
 	if (bat) {
 		// mixer.update(1 / 250);
 		mixer.update(delta);
+        mothMixers.forEach(mixer => {
+            mixer.update(delta);
+        });
 		flyControl.update(delta);
 
         collisionDetect();
+        detectEatMoth();
     }
     
     TWEEN.update(delta);
@@ -214,6 +243,16 @@ function changeMaterial(obj, material) {
     }
 }
 
+function detectEatMoth() {
+    const threshold = 50;
+    moths.forEach(m => {
+        const distance = camera.position.distanceTo(m.position);
+        if (distance < threshold) {
+            console.log("NOM");
+        }
+    });
+}
+
 function collisionDetect() {
     let ballWorld = new THREE.Vector3();
     ball.getWorldPosition(ballWorld);
@@ -222,6 +261,11 @@ function collisionDetect() {
     const raycaster = new THREE.Raycaster(camera.position, direction, 1, 100);
     const intersects = raycaster.intersectObjects(scene.children);
     for ( let i = 0; i < intersects.length; i ++ ) {
+        let name = intersects[i].object.name;
+        if (name != "moth") {
+            console.log("interse");
+            
+        }
         console.log("interse");
         intersects[i].object.material.color.set( 0xff0000 );
     }
