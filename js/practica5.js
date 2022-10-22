@@ -19,6 +19,7 @@ let renderer, scene, camera;
 let robot;
 let cameraControls, planta;
 let gui, animation_panel;
+let textureLoader, sceneMap;
 let speed = 2;
 const L = 100;
 
@@ -46,14 +47,48 @@ function init() {
     // Instanciar el nodo raiz de la escena
     scene = new THREE.Scene();
 
+    // Luces
+    placeLights();
+
     // Instanciar la camara
     instantiateCamera();
+}
+
+function placeLights() {
+    const ambient = new THREE.AmbientLight(0x5E5E5E, 0.8);
+    scene.add(ambient);
+
+    const focal = new THREE.SpotLight(0xE3E3E3, 0.6);
+    focal.position.set(200, 375, 250);
+    focal.target.position.set(0, 250, 0);
+    focal.angle = Math.PI / 4;
+    focal.penumbra = 0.2;
+    focal.castShadow = true;
+    focal.shadow.camera.fov = 75;
+    focal.shadow.camera.near = 0.1;
+    focal.shadow.camera.far = 2000;
+    focal.shadow.camera.left = -250;
+    focal.shadow.camera.right = 250;
+    focal.shadow.camera.top = 250;
+    focal.shadow.camera.bottom = -300;
+    scene.add(focal);
+
+    const directional = new THREE.DirectionalLight(0xAEAEAE, 0.3);
+    directional.castShadow = true;
+    directional.shadow.camera.near = 0.1;
+    directional.shadow.camera.far = 2000;
+    directional.shadow.camera.left = -350;
+    directional.shadow.camera.right = 300;
+    directional.shadow.camera.top = 250;
+    directional.shadow.camera.bottom = -225;
+    directional.position.set(-85, 150,-85);
+    scene.add(directional);
 }
 
 function instantiateCamera() {
     const aspectRatio = window.innerWidth / window.innerHeight;
 
-    camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 10000);
     camera.position.set(200, 300, 200);
     camera.lookAt(0, 10, 0);
 
@@ -70,15 +105,37 @@ function setOtherCameras(ar) {
 }
 
 function loadScene() {
+    // Texturas
+    textureLoader = new THREE.TextureLoader().setPath("textures/");
+    loadSceneMap();    
+
     // Material sencillo
-    const material = getNormalMaterial();
+    // const material = getNormalMaterial();
+    const material = getFloorMaterial();
 
     // Robot 
     robot = getRobot(material);
+    console.log(robot);
     scene.add(robot);
 
     // Floor
-    scene.add(getFloor(material));
+    const floorMaterial = getFloorMaterial();
+    scene.add(getFloor(floorMaterial));
+}
+
+function loadSceneMap() {
+    const hdriBox = new THREE.Mesh(new THREE.BoxGeometry(2500, 2500, 2500),
+        ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"].map((v, index, list) => {
+            return new THREE.MeshBasicMaterial({
+                map: textureLoader.load("factory/" + v),
+                side: THREE.BackSide,
+            })
+        })
+    )
+    sceneMap = new THREE.CubeTextureLoader().setPath("textures/factory/").load(
+        ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]
+    )
+    scene.add(hdriBox);
 }
 
 function render(time) {
@@ -86,6 +143,7 @@ function render(time) {
     update(time);
 
     renderer.clear();
+    renderer.shadowMap.enabled = true;
 
     // Camara esquina
     const size = Math.min(window.innerWidth / 4, window.innerHeight / 4);
@@ -331,6 +389,42 @@ function getNormalMaterial() {
         { wireframe: false, flatShading: true }
     );
 }
+
+function getRotulaMaterial() {
+    const material = new THREE.MeshPhongMaterial(
+        {
+            envMap: sceneMap
+        }
+    );
+    return material;
+}
+
+function getFloorMaterial() {
+    const material = new THREE.MeshLambertMaterial(
+        {
+            map: textureLoader.load("scifi/Sci-fi_Floor_003_basecolor.jpg")
+        }
+    );
+    return material;
+}
+
+function getGalvanizedMaterial() {
+    const material = new THREE.MeshLambertMaterial(
+        {
+            map: textureLoader.load("galvanized/Metal_Galvanized_DIFF.jpg"),
+        }
+    );
+    return material;
+}
+
+function getPotatoMaterial() {
+    const material = new THREE.MeshLambertMaterial(
+        {
+            map: textureLoader.load("potato/Potato_albedo.png")
+        }
+    );
+    return material;
+}
 // -------------------------------------------
 
 
@@ -340,6 +434,7 @@ function getNormalMaterial() {
 // ------------------ SUELO ------------------
 function getFloor(material) {
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000, 10, 10), material);
+    floor.receiveShadow = true;
     floor.rotation.x = -Math.PI/2;
     return floor;
 }
@@ -351,6 +446,8 @@ function getFloor(material) {
 // ------------------ ROBOT ------------------
 function getRobot(material) {
     const rob = new THREE.Object3D();
+    rob.castShadow = true;
+    rob.receiveShadow = true;
     const base = getBase(material);
     base.name = "base";
 
@@ -360,8 +457,10 @@ function getRobot(material) {
 }
 
 function getBase(material) {
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(50, 50, 15, 64), material);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(50, 50, 15, 64), getPotatoMaterial());
     base.position.set(0, 0, 0);
+    base.castShadow = true;
+    base.receiveShadow = true;
     const brazo = getBrazo(material);
     brazo.name = "brazo";
     base.add(brazo);
@@ -372,10 +471,19 @@ function getBrazo(material) {
     const brazo = new THREE.Object3D();
     brazo.position.set(0, 15 / 2, 0);
 
-    const eje = getEje(material);
-    const esparrago = getEsparrago(material);
-    const rotula = getRotula(material);
-    const antebrazo = getAntebrazo(material);
+    const eje = getEje(getGalvanizedMaterial());
+    eje.castShadow = true;
+    eje.receiveShadow = true;
+    const esparrago = getEsparrago(getGalvanizedMaterial());
+    esparrago.castShadow = true;
+    esparrago.receiveShadow = true;
+    const rotula = getRotula(getRotulaMaterial());
+    rotula.castShadow = true;
+    rotula.receiveShadow = true;
+    const antebrazo = getAntebrazo(getPotatoMaterial());
+    antebrazo.castShadow = true;
+    antebrazo.receiveShadow = true;
+    
 
     brazo.add(eje);
     brazo.add(esparrago);
@@ -410,10 +518,9 @@ function getAntebrazo(material) {
     antebrazo.name = "antebrazo";
     antebrazo.position.set(0, 120, 0);
 
-    const disco = getDisco(material);
-    const nervios = getNervios(material);
-
-    const mano = getMano(material);
+    const disco = getDisco(getPotatoMaterial());
+    const nervios = getNervios(getGalvanizedMaterial());
+    const mano = getMano(getPotatoMaterial());
     mano.name = "mano";
 
     antebrazo.add(disco);
@@ -425,6 +532,8 @@ function getAntebrazo(material) {
 
 function getDisco(material) {
     const disco = new THREE.Mesh(new THREE.CylinderGeometry(22, 22, 6, 64), material);
+    disco.castShadow = true;
+    disco.receiveShadow = true;
     disco.position.set(0, 0, 0);
     return disco;
 }
@@ -435,6 +544,8 @@ function getNervios(material) {
     const positions = [[sep, sep], [sep, -sep], [-sep, sep], [-sep, -sep]];
     positions.forEach((pos) => {
         const nervio = new THREE.Mesh(new THREE.BoxGeometry(4, 80, 4), material);
+        nervio.castShadow = true;
+        nervio.receiveShadow = true;
         nervio.position.set(pos[0], 80 / 2 + 6, pos[1]);
         nervios.push(nervio);
     });
@@ -443,14 +554,16 @@ function getNervios(material) {
 
 function getMano(material) {
     const mano = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 40, 64), material);
+    mano.castShadow = true;
+    mano.receiveShadow = true;
     mano.position.set(0, 80 + 6, 0);
     mano.rotation.x = Math.PI / 2;
     
 
-    const pinzaI = getPinza(material);
+    const pinzaI = getPinza(getPotatoMaterial());
     pinzaI.name = "pinzaI";
     pinzaI.position.set(15, 10, 0);
-    const pinzaD = getPinza(material);
+    const pinzaD = getPinza(getPotatoMaterial());
     pinzaD.name = "pinzaD"
     pinzaD.rotateX(Math.PI);
     pinzaD.position.set(15, -10, 0);
@@ -467,6 +580,8 @@ function getMano(material) {
 
 function getPinza(material) {
     const pinza = new THREE.Mesh(new THREE.BoxGeometry(19, 20, 4, 8), material);
+    pinza.castShadow = true;
+    pinza.receiveShadow = true;
     pinza.rotation.x = (Math.PI / 2);
     const pinzaTip = getPinzaTip(material);
     pinzaTip.position.set(19, 0, 0);
@@ -476,6 +591,8 @@ function getPinza(material) {
 
 function getPinzaTip(material) {
     const pinzaTip = new THREE.Mesh(getPinzaTipGeometry(), material);
+    pinzaTip.castShadow = true;
+    pinzaTip.receiveShadow = true;
     return pinzaTip;
 }
 
