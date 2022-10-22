@@ -12,12 +12,14 @@ import { OrbitControls } from "../lib/OrbitControls.module.js";
 import { TWEEN } from "../lib/tween.module.min.js";
 import { GUI } from "../lib/lil-gui.module.min.js";
 import { FlyControls } from "../lib/FlyControls.js";
+import * as SkeletonUtils from "../lib/SkeletonUtils.js";
 
 // Variables estandar
 let renderer, scene, camera;
 
 // Otras globales
 let loader, mixer, mothMixers;
+let mothSpawners, mothSpawnersActive, mothSpawnersInactive, mothsActive;
 let bat, batModel, moths, city, pointer, ball;
 let light;
 let clock, delta, interval;
@@ -49,6 +51,7 @@ function init() {
     clock = new THREE.Clock();
     delta = 0;
     interval = 1 / 60;
+    setupMothSpawners();
 
     // Instanciar el motor de render
     renderer = new THREE.WebGLRenderer();
@@ -65,22 +68,32 @@ function init() {
     initFlightControls(camera);
 }
 
+function setupMothSpawners() {
+    mothsActive = 5;
+    mothSpawnersActive = [];
+    mothSpawnersInactive = [];
+    mothSpawners = [
+        new THREE.Vector3(-14, 1, -20),     // Primera
+    ];
+    mothsActive = Math.min(mothsActive, mothSpawners.length);
+}
+
 function instantiateCamera() {
     const aspectRatio = window.innerWidth / window.innerHeight;
 
-    camera = new THREE.PerspectiveCamera(35, aspectRatio, 0.1, 100000);
+    camera = new THREE.PerspectiveCamera(28, aspectRatio, 0.01, 1000);
     // camera.position.set(90, 518, 1670);
     // camera.lookAt(90, 518, 1670);
-    camera.position.set(0, 10, 0);
-    camera.lookAt(0, 10, 0);
+    camera.position.set(-14, 1, -7);
+    camera.lookAt(-14, 1, -8);
     scene.add(camera);
 }
 
 function initFlightControls(camera) {
     flyControl = new FlyControls(camera, renderer.domElement);
     flyControl.autoForward = false;
-    flyControl.movementSpeed = 250;
-    flyControl.rollSpeed = 0.8;
+    flyControl.movementSpeed = 5;
+    flyControl.rollSpeed = 0.7;
     flyControl.dragToLook = true;
 }
 
@@ -99,12 +112,13 @@ function loadPointer() {
     const material = getNormalMaterial();
 
     pointer = new THREE.Object3D();
-    ball = new THREE.Mesh(new THREE.SphereGeometry(5, 32, 32), material);
+    ball = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), material);
+    ball.scale.set(0.1, 0.1, 0.1);
     pointer.position.set(0,0,0);
 
     ball.position.x = 0;
     ball.position.y = 0;
-    ball.position.z = -155;
+    ball.position.z = -3;
     pointer.add(ball);
     camera.add(pointer);
 }
@@ -115,6 +129,7 @@ function loadBat() {
     {
         let batClip;
         bat = new THREE.Object3D();
+        bat.name = "bat";
         bat.position.set(
             0,0,0
         );
@@ -126,9 +141,9 @@ function loadBat() {
             batClip = mixer.clipAction(clip);
         });
         batModel.position.x = 0;
-        batModel.position.y = -0.12;
-        batModel.position.z = -0.24;
-        batModel.scale.set(0.3, 0.3, 0.3);
+        batModel.position.y = -0.0048;
+        batModel.position.z = -0.018;
+        batModel.scale.set(0.01, 0.01, 0.01);
 
         batClip.timeScale = 0.5;
         batClip.play();
@@ -144,38 +159,60 @@ function loadCity() {
     function(gltf)
     {
         city = gltf.scene;
-        city.scale.set(0.1, 0.1, 0.1);
+        city.receiveShadow = true;
+        city.scale.set(0.002, 0.002, 0.002);
         city.position.set(0, 0, 0);
         scene.add(city);
     });
 }
 
 function loadMoths() {
-    moths = []
-    mothMixers = []
     loadMoth();
 }
 
 function loadMoth() {
+    moths = [];
+    mothMixers = [];
     // Polilla
     loader.load('models/moth/scene.gltf',
     function(gltf)
     {
         let moth = gltf.scene;
+        moth.receiveShadow = true;
         moth.name = "moth";
         let mothClip = null;
         let mothMixer = new THREE.AnimationMixer(moth);
         mothClip = mothMixer.clipAction(gltf.animations[1]);
-        moth.scale.set(0.005, 0.005, 0.005);
+        moth.scale.set(0.00012, 0.00012, 0.00012);
         mothClip.timeScale = 1;
         mothClip.play();
         mothMixers.push(mothMixer);
-        moth.position.x = camera.position.x + 40;
-        moth.position.y = camera.position.y + 20;
-        moth.position.z = camera.position.z + 40;
+        moth.position.x = camera.position.x + 4;
+        moth.position.y = camera.position.y + 2;
+        moth.position.z = camera.position.z + 4;
+        moth.position.set(0, 1, 0);
+
+        moth.position.x += Math.random() * 1.5;
+        moth.position.z += Math.random() * 1.5;
         scene.add(moth);
         console.log(moth);
         moths.push(moth);
+
+        
+        for (let i = 1; i < mothsActive + 3; i++) {
+            let newMoth = SkeletonUtils.clone(moth);
+            let mothClip = null;
+            let mothMixer = new THREE.AnimationMixer(newMoth);
+            mothClip = mothMixer.clipAction(gltf.animations[1]);
+            mothClip.timeScale = 1;
+            mothClip.play();
+            mothMixers.push(mothMixer);
+            newMoth.position.x += Math.random() * 5;
+            newMoth.position.z += Math.random() * 5;
+            console.log(newMoth)
+            scene.add(newMoth);
+            moths.push(newMoth);
+        }
     });
 }
 
@@ -244,11 +281,11 @@ function changeMaterial(obj, material) {
 }
 
 function detectEatMoth() {
-    const threshold = 50;
+    const threshold = 5;
     moths.forEach(m => {
         const distance = camera.position.distanceTo(m.position);
         if (distance < threshold) {
-            console.log("NOM");
+            m.visible = false;
         }
     });
 }
@@ -258,16 +295,14 @@ function collisionDetect() {
     ball.getWorldPosition(ballWorld);
     let direction = new THREE.Vector3();
     direction.subVectors(ballWorld, camera.position).normalize();
-    const raycaster = new THREE.Raycaster(camera.position, direction, 1, 100);
+    const raycaster = new THREE.Raycaster(camera.position, direction, 1, 2);
     const intersects = raycaster.intersectObjects(scene.children);
     for ( let i = 0; i < intersects.length; i ++ ) {
         let name = intersects[i].object.name;
-        if (name != "moth") {
+        if (name != "moth" && name != "bat") {
             console.log("interse");
-            
+            intersects[i].object.material.color.set( 0xff0000 );
         }
-        console.log("interse");
-        intersects[i].object.material.color.set( 0xff0000 );
     }
 }
 
@@ -303,7 +338,7 @@ function keydown(e) {
             updateDebugOptions();
             break;
         default:
-            console.log(key);
+            // console.log(key);
             captured = false;
     }
 
