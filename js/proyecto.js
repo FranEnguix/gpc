@@ -333,7 +333,7 @@ function keydown(e) {
             ball.visible = !ball.visible;
             console.log("camera", camera.position);
             break;
-        case "F3":
+        case "3":
             debugMode = !debugMode;
             updateDebugOptions();
             break;

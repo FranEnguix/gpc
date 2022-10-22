@@ -130,14 +130,14 @@ function loadGUI() {
 
     gui = new GUI();
     gui.title("Control Robot");
-    gui.add(animation_panel, "giro_base", -180, 180, 0.025).name("Giro Base");
-    gui.add(animation_panel, "giro_brazo", -45, 45, 0.025).name("Giro Brazo");
-    gui.add(animation_panel, "giro_antebrazo_y", -180, 180, 0.025).name("Giro Antebrazo Y");
-    gui.add(animation_panel, "giro_antebrazo_z", -90, 90, 0.025).name("Giro Antebrazo Z");
-    gui.add(animation_panel, "giro_pinza", -40, 220, 0.025).name("Giro Pinza");
-    gui.add(animation_panel, "separacion_pinza", 0, 15, 0.025).name("Separacion Pinza");
-    gui.add(animation_panel, "alambrico").name("Alambres");
-    gui.add(animation_panel, "animar").name("Anima");
+    gui.add(animation_panel, "giro_base", -180, 180, 0.025).name("Giro Base").listen();
+    gui.add(animation_panel, "giro_brazo", -45, 45, 0.025).name("Giro Brazo").listen();
+    gui.add(animation_panel, "giro_antebrazo_y", -180, 180, 0.025).name("Giro Antebrazo Y").listen();
+    gui.add(animation_panel, "giro_antebrazo_z", -90, 90, 0.025).name("Giro Antebrazo Z").listen();
+    gui.add(animation_panel, "giro_pinza", -40, 220, 0.025).name("Giro Pinza").listen();
+    gui.add(animation_panel, "separacion_pinza", 0, 15, 0.025).name("Separacion Pinza").listen();
+    gui.add(animation_panel, "alambrico").name("Alambres").listen();
+    gui.add(animation_panel, "animar").name("Anima").listen();
 }
 
 function panelUpdate() {
