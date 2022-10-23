@@ -18,14 +18,14 @@ import * as SkeletonUtils from "../lib/SkeletonUtils.js";
 let renderer, scene, camera;
 
 // Otras globales
-let loader, mixer, mothMixers;
-let mothSpawners, mothSpawnersActive, mothSpawnersInactive, mothsActive;
+let loader, textureLoader, mixer, mothMixers;
+let mothSpawnerPositions, mothSpawners, mothSpawnersActive, mothSpawnersInactive, mothsActive;
 let bat, batModel, moths, city, pointer, ball;
 let light;
 let clock, delta, interval;
 let flyControl;
 let gui, animation_panel;
-let speed = 2;
+let spawnerLightIntensity = 0.1;
 const L = 5000;
 
 let debugMode = false;
@@ -51,6 +51,10 @@ function init() {
     clock = new THREE.Clock();
     delta = 0;
     interval = 1 / 60;
+
+    // Instanciar el nodo raiz de la escena
+    scene = new THREE.Scene();
+
     setupMothSpawners();
 
     // Instanciar el motor de render
@@ -59,9 +63,6 @@ function init() {
     renderer.autoClear = false;
     renderer.setClearColor(0.16, 0.16, 0.16);
     document.querySelector('div').appendChild(renderer.domElement);
-
-    // Instanciar el nodo raiz de la escena
-    scene = new THREE.Scene();
 
     // Instanciar la camara
     instantiateCamera();
@@ -72,10 +73,52 @@ function setupMothSpawners() {
     mothsActive = 5;
     mothSpawnersActive = [];
     mothSpawnersInactive = [];
-    mothSpawners = [
+    mothSpawners = [];
+    mothSpawnerPositions = [
         new THREE.Vector3(-14, 1, -20),     // Primera
+        new THREE.Vector3(-21, 1, -28),     // Callejon 2
+        new THREE.Vector3(-28, 1, -21),     // Baloncesto
+        new THREE.Vector3(-36, 1, -14),     // Bar copas
+        new THREE.Vector3(-50, 1, -14),     // Pawn store
+        new THREE.Vector3(-72, 1, -20),     // Baloncesto extraradio
+        new THREE.Vector3(-48, 1, -24),     // Callejon 3
+        new THREE.Vector3(-37, 1, -28),     // Cartel chino
+        new THREE.Vector3(-6, 1, -26),      // Callejon pez
+        new THREE.Vector3(-24, 4.3, -22),   // Techo agua
+        new THREE.Vector3(4, 1, -28),       // Detras pescaderia
+        new THREE.Vector3(10, 4.3, -18),    // Techo helipuerto
+        new THREE.Vector3(13, 1, -14),      // Final calle derecha
+        new THREE.Vector3(-61, 6.5, -17),   // Azotea de la izq
     ];
+    let i = 0;
+    mothSpawnerPositions.forEach(v => {
+        const spawner = new THREE.Object3D();
+        spawner.name = "spawner" + i++;
+        const light = new THREE.SpotLight(0x0f0f00, 0);
+        light.castShadow = true;
+        light.decay = 2;
+        light.position.set(0, 1, 0);
+        light.name = "light";
+        light.shadow.camera.near = 0.1;
+        light.shadow.camera.far = 3;
+        light.shadow.camera.fov = 30;
+        spawner.position.set(v.x, v.y, v.z);
+        mothSpawners.push(spawner);
+        mothSpawnersInactive.push(spawner);
+        scene.add(spawner);
+        spawner.add(light);
+
+        // if (i++ > 0)
+        //     mothSpawnersInactive.push(spawner);
+        // else
+        //     mothSpawnersActive.push(spawner);
+    });
     mothsActive = Math.min(mothsActive, mothSpawners.length);
+    
+    // for (let i = 1; i < mothsActive; i++) {
+    //     const spawner = getInactiveSpawner();
+    //     mothSpawnersActive.push(spawner);
+    // }
 }
 
 function instantiateCamera() {
@@ -92,19 +135,21 @@ function instantiateCamera() {
 function initFlightControls(camera) {
     flyControl = new FlyControls(camera, renderer.domElement);
     flyControl.autoForward = false;
-    flyControl.movementSpeed = 5;
-    flyControl.rollSpeed = 0.7;
+    flyControl.movementSpeed = 4;
+    flyControl.rollSpeed = 0.6;
     flyControl.dragToLook = true;
 }
 
 function loadScene() {
     loader = new GLTFLoader();
+    textureLoader = new THREE.TextureLoader().setPath("textures/");
 
     // Pointer for raycast obstacles
     loadPointer();
     loadBat();
     loadCity();
     loadMoths();
+    loadSceneMap();
 }
 
 function loadPointer() {
@@ -167,10 +212,6 @@ function loadCity() {
 }
 
 function loadMoths() {
-    loadMoth();
-}
-
-function loadMoth() {
     moths = [];
     mothMixers = [];
     // Polilla
@@ -179,10 +220,10 @@ function loadMoth() {
     {
         let moth = gltf.scene;
         moth.receiveShadow = true;
+        moth.castShadow = true;
         moth.name = "moth";
-        let mothClip = null;
         let mothMixer = new THREE.AnimationMixer(moth);
-        mothClip = mothMixer.clipAction(gltf.animations[1]);
+        let mothClip = mothMixer.clipAction(gltf.animations[1]);
         moth.scale.set(0.00012, 0.00012, 0.00012);
         mothClip.timeScale = 1;
         mothClip.play();
@@ -190,34 +231,81 @@ function loadMoth() {
         moth.position.x = camera.position.x + 4;
         moth.position.y = camera.position.y + 2;
         moth.position.z = camera.position.z + 4;
-        moth.position.set(0, 1, 0);
+        moth.position.set(0, -0.6, 0);
 
-        moth.position.x += Math.random() * 1.5;
-        moth.position.z += Math.random() * 1.5;
-        scene.add(moth);
-        console.log(moth);
+        // moth.position.x += Math.random() * 1.5;
+        // moth.position.z += Math.random() * 1.5;
+        // scene.add(moth);
+        // mothSpawners[0].add(moth);
+
+        const newSpawner = getInactiveSpawner("spawner0");
+        newSpawner.add(moth);
+        enableSpawner(newSpawner);
         moths.push(moth);
 
-        
-        for (let i = 1; i < mothsActive + 3; i++) {
+        // for (let i = 1; i < mothsActive; i++) {
+        //     let newMoth = SkeletonUtils.clone(moth);
+        //     newMoth.name = "moth";
+        //     let mothMixer = new THREE.AnimationMixer(newMoth);
+        //     let mothClip = mothMixer.clipAction(gltf.animations[1]);
+        //     mothClip.timeScale = 1;
+        //     mothClip.play();
+        //     mothMixers.push(mothMixer);
+        //     // newMoth.position.x += Math.random() * 5;
+        //     // newMoth.position.z += Math.random() * 5;
+        //     // scene.add(newMoth);
+        //     mothSpawnersActive[i].add(newMoth);
+        //     moths.push(newMoth);
+        // }
+
+        for (let i = 0; i < mothSpawnersInactive.length; i++) {
             let newMoth = SkeletonUtils.clone(moth);
-            let mothClip = null;
+            newMoth.name = "moth";
             let mothMixer = new THREE.AnimationMixer(newMoth);
-            mothClip = mothMixer.clipAction(gltf.animations[1]);
+            let mothClip = mothMixer.clipAction(gltf.animations[1]);
             mothClip.timeScale = 1;
             mothClip.play();
+            newMoth.visible = false;
             mothMixers.push(mothMixer);
-            newMoth.position.x += Math.random() * 5;
-            newMoth.position.z += Math.random() * 5;
-            console.log(newMoth)
-            scene.add(newMoth);
+            // newMoth.position.x += Math.random() * 5;
+            // newMoth.position.z += Math.random() * 5;
+            // scene.add(newMoth);
+            mothSpawnersInactive[i].add(newMoth);
             moths.push(newMoth);
         }
-    });
+
+        for (let i = 1; i < mothsActive; i++) {
+            const newSpawner = getInactiveSpawner();
+            enableSpawner(newSpawner);
+        }
+
+
+        });        
+}
+
+function loadSceneMap() {
+    const hdriBox = new THREE.Mesh(new THREE.BoxGeometry(100, 25, 45),
+        ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"].map((v, index, list) => {
+            let tex = textureLoader.load("night/" + v);
+            tex.repeat.set(16, 8);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            return new THREE.MeshLambertMaterial({
+                map: tex,
+                side: THREE.BackSide
+            });
+        })
+    )
+    hdriBox.name = "limitBox";
+    hdriBox.position.set(-30, 0, -25);
+    // sceneMap = new THREE.CubeTextureLoader().setPath("textures/factory/").load(
+    //     ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]
+    // )
+    scene.add(hdriBox);
 }
 
 function addLights() {
-    light = new THREE.AmbientLight(0xffffff); // soft white light
+    light = new THREE.AmbientLight(0xAAAAAA, 0.8); // soft white light
     scene.add(light);
 }
 
@@ -281,13 +369,26 @@ function changeMaterial(obj, material) {
 }
 
 function detectEatMoth() {
-    const threshold = 5;
+    const threshold = 4;
     moths.forEach(m => {
-        const distance = camera.position.distanceTo(m.position);
-        if (distance < threshold) {
-            m.visible = false;
+        if (m.visible) {
+            let mothPosition = new THREE.Vector3();
+            m.getWorldPosition(mothPosition);
+            const distance = camera.position.distanceTo(mothPosition);
+            if (distance < threshold) {
+                respawnMoth(m);
+                // TODO: suma puntos
+                console.log("NOM");
+            }
         }
     });
+}
+
+function respawnMoth(mothEaten) {
+    const newSpawner = getInactiveSpawner();
+    const mothSpawner = mothEaten.parent;
+    disableSpawner(mothSpawner);
+    enableSpawner(newSpawner);
 }
 
 function collisionDetect() {
@@ -295,7 +396,7 @@ function collisionDetect() {
     ball.getWorldPosition(ballWorld);
     let direction = new THREE.Vector3();
     direction.subVectors(ballWorld, camera.position).normalize();
-    const raycaster = new THREE.Raycaster(camera.position, direction, 1, 2);
+    const raycaster = new THREE.Raycaster(camera.position, direction, 0.4, 0.8);
     const intersects = raycaster.intersectObjects(scene.children);
     for ( let i = 0; i < intersects.length; i ++ ) {
         let name = intersects[i].object.name;
@@ -360,6 +461,58 @@ function rad(deg) {
 
 function deg(rad) {
     return rad * (180 / Math.PI); 
+}
+
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getInactiveSpawner(spawnerName="") {
+    if (spawnerName === "") {
+        const max = mothSpawnersInactive.length;
+        const randomIndex = getRandomInt(0, max);
+        // return mothSpawnersInactive.splice(randomIndex, 1)[0];
+        return mothSpawnersInactive[randomIndex];
+    } else {
+        const index = searchSpawner(spawnerName, mothSpawnersInactive)[0];
+        return mothSpawnersInactive[index];
+    } 
+}
+
+function disableSpawner(spawner) {
+    const light = spawner.getObjectByName("light");
+    const moth = spawner.getObjectByName("moth");
+    light.intensity = 0;
+    moth.visible = false;
+    // const index = mothSpawnersActive.indexOf(spawner);
+    const index = searchSpawner(spawner.name, mothSpawnersActive)[0];
+    mothSpawnersActive.splice(index, 1);
+    mothSpawnersInactive.push(spawner);
+}
+
+function enableSpawner(spawner) {
+    if (spawner.name == "spawner0")
+        console.log(spawner);
+    const light = spawner.getObjectByName("light");
+    const moth = spawner.getObjectByName("moth");
+    light.intensity = spawnerLightIntensity;
+    moth.visible = true;
+    // const index = mothSpawnersInactive.indexOf(spawner);
+    const index = searchSpawner(spawner.name, mothSpawnersInactive)[0];
+    mothSpawnersInactive.splice(index, 1);
+    mothSpawnersActive.push(spawner);
+}
+
+function searchSpawner(spawnerName, spawnerList) {
+    let i;
+    for (i = 0; i < spawnerList.length; i++) {
+        const s = spawnerList[i];
+        if (s.name === spawnerName)
+            return [i, s];
+    }
+    return false;
 }
 // -------------------------------------------
 
