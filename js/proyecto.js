@@ -26,7 +26,8 @@ let clock, delta, interval;
 let flyControl;
 let gui, animation_panel;
 let spawnerLightIntensity = 0.3;
-let controlsPanel;
+let controlsPanel, mothCounter;
+let mothsEaten = 0;
 const L = 5000;
 
 let debugMode = false;
@@ -53,6 +54,7 @@ function init() {
     clock = new THREE.Clock();
     delta = 0;
     interval = 1 / 60;
+    mothCounter = document.getElementById("numMoths");
     controlsPanel = document.getElementById("controls");
     
 
@@ -455,17 +457,17 @@ function detectEatMoth() {
             const distance = camera.position.distanceTo(mothPosition);
             if (distance < threshold) {
                 respawnMoth(m);
-                // TODO: suma puntos
+                updateMothCounter(++mothsEaten);
                 console.log("NOM");
             }
         }
     });
 }
 
-function respawnMoth(mothEaten) {
+function respawnMoth(mothsEaten) {
     let newSpawner = getInactiveSpawner();
     enableSpawner(newSpawner);
-    const mothSpawner = mothEaten.parent;
+    const mothSpawner = mothsEaten.parent;
     disableSpawner(mothSpawner);    
 }
 
@@ -623,6 +625,10 @@ function getMothLight(on = false) {
     }
     light.name = "light";
     return light;
+}
+
+function updateMothCounter(numMoths) {
+    mothCounter.textContent = numMoths;
 }
 // -------------------------------------------
 
