@@ -26,8 +26,10 @@ let clock, delta, interval;
 let flyControl;
 let gui, animation_panel;
 let spawnerLightIntensity = 0.3;
-let controlsPanel, mothCounter;
+let controlsPanel, mothCounters, deathScreen;
 let mothsEaten = 0;
+let hitBuildingMottos, hitSkyboxMottos;
+let dead = false;
 const L = 5000;
 
 let debugMode = false;
@@ -54,8 +56,18 @@ function init() {
     clock = new THREE.Clock();
     delta = 0;
     interval = 1 / 60;
-    mothCounter = document.getElementById("numMoths");
+    mothCounters = document.getElementsByClassName("numMoths");
     controlsPanel = document.getElementById("controls");
+    deathScreen = document.getElementById("death");
+    hitBuildingMottos = [
+        "¿Creías que lo podías atravesar?",
+        "Has convertido a tu personaje en un sprite 2D.",
+        "“Siempre volaba” dijeron tus amigos en tu funeral."
+    ];
+    hitSkyboxMottos = [
+        "Las aves rapaces se han dado un festín contigo.",
+        "Entraste al territorio de los búhos, pero no saliste...",
+    ];
     
 
     // Instanciar el nodo raiz de la escena
@@ -104,7 +116,7 @@ function setupLoadingManager() {
                 "¿He sido muy directo?\r\nPues recuerda que hay otros peligros, como las aves rapaces que vuelan fuera de la ciudad,\r\nesperando a que un incauto se acerque.",
                 "Bueno, disfruta de tu último día, porque además ¡fue un buen día!" +
                     "\r\nSeguiste tu instinto para encontrar polillas y te las comiste.",
-                "NOTAS IMPORTANTES:\r\n" + 
+                "NOTAS IMPORTANTES:\r\n\r\n" + 
                     "Si estás lejos de una polilla puedes guiarte por tu 'instinto' (haz rojo de luz en el suelo que si lo sigues te lleva a la ubicación de la polilla).\r\n" +
                     "Los murciélagos usan la ecolocalización para 'ver' (necesitas chirriar o cada vez verás menos).\r\n" +
                     "Usa el ratón (mantén clic izq o der) para establecer la orientación. Puedes hacer giros bruscos, así que es muy sensible ¡pruébalo!.\r\n" +
@@ -385,24 +397,26 @@ function addLights() {
 }
 
 function addFog() {
-    fog = new THREE.Fog(0x908080, 0.1, 50);
+    fog = new THREE.Fog(0x958080, 0.1, 50);
     scene.fog = fog;
 }
 
 function render() {
-    requestAnimationFrame(render);
-    update();
+    if (!dead) {
+        requestAnimationFrame(render);
+        update();
 
-    renderer.clear();
+        renderer.clear();
 
-    // Camara esquina
-    // const size = Math.min(window.innerWidth / 4, window.innerHeight / 4);
-    // renderer.setViewport(0, window.innerHeight - size, size, size);
-    // renderer.render(scene, planta);
+        // Camara esquina
+        // const size = Math.min(window.innerWidth / 4, window.innerHeight / 4);
+        // renderer.setViewport(0, window.innerHeight - size, size, size);
+        // renderer.render(scene, planta);
 
-    // Camara principal
-    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-    renderer.render(scene, camera);
+        // Camara principal
+        renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+        renderer.render(scene, camera);
+    }
 }
 
 function update() {
@@ -458,7 +472,6 @@ function detectEatMoth() {
             if (distance < threshold) {
                 respawnMoth(m);
                 updateMothCounter(++mothsEaten);
-                console.log("NOM");
             }
         }
     });
@@ -481,8 +494,13 @@ function collisionDetect() {
     for ( let i = 0; i < intersects.length; i ++ ) {
         let name = intersects[i].object.name;
         if (name != "moth" && name != "bat") {
+            dead = true;
             console.log("interse");
-            intersects[i].object.material.color.set( 0xff0000 );
+            if (name == "limitBox") {
+                death(hitSkyboxMottos);
+            } else {
+                death(hitBuildingMottos);
+            }
         }
     }
 }
@@ -490,10 +508,6 @@ function collisionDetect() {
 function updateDebugOptions(debugMode) {
     if (ball)
         ball.visible = debugMode;
-}
-
-function initGame() {
-
 }
 // -------------------------------------------
 
@@ -511,8 +525,6 @@ function keydown(e) {
 
     switch(key) {
         case " ":
-            ball.visible = !ball.visible;
-            console.log("camera", camera.position);
             break;
         case "3":
             debugMode = !debugMode;
@@ -563,8 +575,6 @@ function getInactiveSpawner(spawnerName="") {
     if (spawnerName === "") {
         const max = mothSpawnersInactive.length - 1;
         const randomIndex = getRandomInt(0, max);
-        console.log("getInactiveSpawner:", randomIndex, max, mothSpawnersInactive);
-        // return mothSpawnersInactive.splice(randomIndex, 1)[0];
         return mothSpawnersInactive[randomIndex];
     } else {
         const index = searchSpawner(spawnerName, mothSpawnersInactive)[0];
@@ -584,8 +594,6 @@ function disableSpawner(spawner) {
 }
 
 function enableSpawner(spawner) {
-    if (!spawner)
-        console.log(spawner);
     const light = spawner.getObjectByName("light");
     const moth = spawner.getObjectByName("moth");
     light.intensity = spawnerLightIntensity;
@@ -628,7 +636,20 @@ function getMothLight(on = false) {
 }
 
 function updateMothCounter(numMoths) {
-    mothCounter.textContent = numMoths;
+    for (let i = 0; i < mothCounters.length; i++)
+        mothCounters[i].textContent = numMoths;
+}
+
+function death(causeMottos) {
+    const index = getRandomInt(0, causeMottos.length - 1);
+    const motto = causeMottos[index];
+    deathScreen.style.display = "flex";
+    const mottoHolder = deathScreen.querySelector("div");
+    mottoHolder.textContent = motto;
+    const btn = deathScreen.querySelector("input");
+    btn.addEventListener('click', () => {
+        window.location.reload();
+    });
 }
 // -------------------------------------------
 

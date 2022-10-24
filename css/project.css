@@ -71,13 +71,13 @@ html > div {
     text-align: center;
 }
 
-#tutorial input {
+input {
     border-radius: 5px;
     transition: all .4s ease;
     -webkit-transition: all .4s ease;
 }
 
-#tutorial input:hover {
+input:hover {
     background-color: rgba(255, 0, 0, 0.8);
     color: #FFEEAA;
 }
@@ -110,7 +110,7 @@ html > div {
     font-size: small;
 }
 
-#polillas {
+.polillas {
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -121,11 +121,40 @@ html > div {
     padding: 10px 0;
 }
 
-#numMoths {
+.numMoths {
     position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -30%);
+    font-weight: bold;
+    color: rgb(163, 23, 23);
+}
+
+#death {
+    display: none;
+    background-color: black;
+}
+
+#motto {
+    color: #bdb7a0;
+    font-size: large;
+    margin: 15px;
+}
+
+#polilla-muerte {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 0;
+    margin: 15px;
+}
+
+#polilla-muerte > .numMoths {
+    position: absolute;
+    left: auto;
+    top: auto;
+    transform: translate(0%, 15%);
     font-weight: bold;
     color: rgb(163, 23, 23);
 }
