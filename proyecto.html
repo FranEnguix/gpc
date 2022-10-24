@@ -12,6 +12,30 @@
 </head>
 
 <body>
-    <div>
+    <div id="game">
+        <div class="hold-window" id="loadingManager-screen">
+            <label for="progress-bar">Loading...</label>
+            <progress id="progress-bar" value="0" max="100"></progress>
+        </div>
+        <div class="hold-window" id="tutorial">
+            <div>
+                <div id="text-box">
+                    Eres un murciélago, tu comida favorita son las polillas y vas a vivir el día en el que moriste.
+                </div>
+                <input type="button" value="Siguiente">
+            </div>
+        </div>
+        <div id="controls">
+            <div id="controls-left">
+                <div>H</div>
+                <div>Espacio</div>
+                <div>W</div>
+            </div>
+            <div id="controls-right">
+                <div>controles</div>
+                <div>chirrido</div>
+                <div>subir</div>
+            </div>
+        </div>
     </div>
 </body>

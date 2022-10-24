@@ -21,11 +21,12 @@ let renderer, scene, camera;
 let loader, loadingManager, textureLoader, mixer, mothMixers;
 let mothSpawnerPositions, mothSpawners, mothSpawnersActive, mothSpawnersInactive, mothsActive;
 let bat, batModel, moths, city, pointer, ball;
-let light;
+let light, fog;
 let clock, delta, interval;
 let flyControl;
 let gui, animation_panel;
-let spawnerLightIntensity = 0.1;
+let spawnerLightIntensity = 0.3;
+let controlsPanel;
 const L = 5000;
 
 let debugMode = false;
@@ -37,6 +38,7 @@ window.addEventListener('load', () => {
     loadScene();
     // Lights
     addLights();
+    addFog();
     render();
     // Debug
     updateDebugOptions(debugMode);
@@ -51,6 +53,7 @@ function init() {
     clock = new THREE.Clock();
     delta = 0;
     interval = 1 / 60;
+    controlsPanel = document.getElementById("controls");
     
 
     // Instanciar el nodo raiz de la escena
@@ -71,10 +74,12 @@ function init() {
 }
 
 function setupLoadingManager() {
+    const progressBar = document.getElementById("progress-bar");
     loadingManager = new THREE.LoadingManager();
     loadingManager.onStart = (url, loaded, total) => {
     };
     loadingManager.onProgress = (url, loaded, total) => {
+        progressBar.value = (loaded/total) * 100;
     };
     loadingManager.onLoad = () => {
         mothsActive = Math.min(mothsActive, mothSpawnerPositions.length);
@@ -88,6 +93,41 @@ function setupLoadingManager() {
                 enableSpawner(spawner);
             }
         }
+        
+        window.setTimeout(() => {
+            let i = 0;
+            const texts = [
+                "Pero no te pongas triste, así es la vida... ¿no?\r\n" +
+                "Un día estás comiendo polillas y al otro te estampas contra un edificio.",
+                "¿He sido muy directo?\r\nPues recuerda que hay otros peligros, como las aves rapaces que vuelan fuera de la ciudad,\r\nesperando a que un incauto se acerque.",
+                "Bueno, disfruta de tu último día, porque además ¡fue un buen día!" +
+                    "\r\nSeguiste tu instinto para encontrar polillas y te las comiste.",
+                "NOTAS IMPORTANTES:\r\n" + 
+                    "Si estás lejos de una polilla puedes guiarte por tu 'instinto' (haz rojo de luz en el suelo que si lo sigues te lleva a la ubicación de la polilla).\r\n" +
+                    "Los murciélagos usan la ecolocalización para 'ver' (necesitas chirriar o cada vez verás menos).\r\n" +
+                    "Usa el ratón (mantén clic izq o der) para establecer la orientación. Puedes hacer giros bruscos, así que es muy sensible ¡pruébalo!.\r\n" +
+                    "Tienes los controles arriba a la izq y puedes esconderlos pulsando la 'H'.\r\n" +
+                    "El juego tiene sonido.\r\n" +
+                    "Pulsa 'F11' para jugarlo a pantalla completa.\r\n" +
+                    "El juego empezará cuando pulses cualquier tecla, y no podrás parar de moverte.",
+            ];
+            const loadingScreen = document.getElementById("loadingManager-screen");
+            loadingScreen.style.display = "none";
+            const tutorial = document.getElementById("tutorial");
+            tutorial.style.display = "flex";
+            const btnTuto = tutorial.querySelector("input");
+            const textBox = document.getElementById("text-box");
+            btnTuto.addEventListener('click', () => {
+                if (i == texts.length)
+                    tutorial.style.display = "none";
+                else {
+                    if (i == texts.length - 1) {
+                        btnTuto.value = "Empezar el juego";
+                    }
+                    textBox.textContent = texts[i++];
+                }
+            })
+        }, 3000);
         console.log("loaded");
     };
 }
@@ -342,6 +382,11 @@ function addLights() {
     scene.add(light);
 }
 
+function addFog() {
+    fog = new THREE.Fog(0x908080, 0.1, 50);
+    scene.fog = fog;
+}
+
 function render() {
     requestAnimationFrame(render);
     update();
@@ -402,7 +447,7 @@ function changeMaterial(obj, material) {
 }
 
 function detectEatMoth() {
-    const threshold = 5;
+    const threshold = 3.5;
     moths.forEach(m => {
         if (m.visible) {
             let mothPosition = new THREE.Vector3();
@@ -471,7 +516,12 @@ function keydown(e) {
             debugMode = !debugMode;
             updateDebugOptions();
             break;
-        case "Alt":
+        case "H":
+        case "h":
+            if (controlsPanel.style.display != "none")
+                controlsPanel.style.display = "none";
+            else
+                controlsPanel.style.display = "flex";
             break;
         default:
             // console.log(key);
