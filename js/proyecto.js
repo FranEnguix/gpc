@@ -29,6 +29,7 @@ let spawnerLightIntensity = 0.3;
 let controlsPanel, mothCounters, deathScreen;
 let mothsEaten = 0;
 let hitBuildingMottos, hitSkyboxMottos;
+let listener, batSound, chewSounds, ambientSong, hitSound, owlSound, audioLoader;
 let dead = false;
 const L = 5000;
 
@@ -45,6 +46,7 @@ window.addEventListener('load', () => {
     render();
     // Debug
     updateDebugOptions(debugMode);
+    ambientSong.play();
 });
 window.addEventListener('resize', updateAspectRatio);
 window.addEventListener('keydown', keydown, true); // envia el evento a keydown antes que a window
@@ -200,11 +202,67 @@ function loadScene() {
     
 
     // Pointer for raycast obstacles
+    loadAudios();
     loadPointer();
     loadBat();
     loadCity();
     loadMoths();
     loadSceneMap();
+}
+
+function loadAudios() {
+    listener = new THREE.AudioListener();
+    camera.add(listener);
+
+    batSound = new THREE.Audio(listener);
+    ambientSong = new THREE.Audio(listener);
+    hitSound = new THREE.Audio(listener);
+    owlSound = new THREE.Audio(listener);
+
+    chewSounds = [
+        new THREE.Audio(listener), 
+        new THREE.Audio(listener), 
+        new THREE.Audio(listener)
+    ];
+
+    audioLoader = new THREE.AudioLoader(loadingManager);
+
+    audioLoader.load("music/bat.ogg", buffer => {
+        batSound.setBuffer(buffer);
+        batSound.setLoop(false);
+        batSound.setVolume(1);
+    });
+
+    const audios = [
+        "music/chewchew1.wav",
+        "music/chewchew2.wav",
+        "music/omnom.ogg",
+    ];
+    for (let i = 0; i < audios.length; i++) {
+        audioLoader.load(audios[i], buffer => {
+            chewSounds[i].setBuffer(buffer);
+            chewSounds[i].setLoop(false);
+            chewSounds[i].setVolume(1);
+        });
+    }
+
+    audioLoader.load("music/halloween_song.ogg", buffer => {
+        ambientSong.setBuffer(buffer);
+        ambientSong.setVolume(1);
+        ambientSong.setLoop(true);
+    });   
+
+    audioLoader.load("music/pa.ogg", buffer => {
+        hitSound.setBuffer(buffer);
+        hitSound.setLoop(false);
+        hitSound.setVolume(0.8);
+    }); 
+    
+    audioLoader.load("music/owl.wav", buffer => {
+        owlSound.setBuffer(buffer);
+        owlSound.setLoop(false);
+        owlSound.setVolume(1);
+    });
 }
 
 function loadPointer() {
@@ -463,13 +521,15 @@ function changeMaterial(obj, material) {
 }
 
 function detectEatMoth() {
-    const threshold = 3.5;
+    const threshold = 3;
     moths.forEach(m => {
         if (m.visible) {
             let mothPosition = new THREE.Vector3();
             m.getWorldPosition(mothPosition);
             const distance = camera.position.distanceTo(mothPosition);
             if (distance < threshold) {
+                const index = getRandomInt(0, chewSounds.length - 1);
+                chewSounds[index].play()
                 respawnMoth(m);
                 updateMothCounter(++mothsEaten);
             }
@@ -497,8 +557,10 @@ function collisionDetect() {
             dead = true;
             console.log("interse");
             if (name == "limitBox") {
+                owlSound.play();
                 death(hitSkyboxMottos);
             } else {
+                hitSound.play();
                 death(hitBuildingMottos);
             }
         }
@@ -525,6 +587,7 @@ function keydown(e) {
 
     switch(key) {
         case " ":
+            batSound.play();
             break;
         case "3":
             debugMode = !debugMode;
