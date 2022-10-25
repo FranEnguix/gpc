@@ -31,6 +31,7 @@ let mothsEaten = 0;
 let hitBuildingMottos, hitSkyboxMottos;
 let listener, batSound, chewSounds, ambientSong, hitSound, owlSound, audioLoader;
 let dead = false;
+let lack_of_vision = 0, game_started = false, moving_bat = false;
 const L = 5000;
 
 let debugMode = false;
@@ -46,7 +47,6 @@ window.addEventListener('load', () => {
     render();
     // Debug
     updateDebugOptions(debugMode);
-    ambientSong.play();
 });
 window.addEventListener('resize', updateAspectRatio);
 window.addEventListener('keydown', keydown, true); // envia el evento a keydown antes que a window
@@ -134,9 +134,10 @@ function setupLoadingManager() {
             const btnTuto = tutorial.querySelector("input");
             const textBox = document.getElementById("text-box");
             btnTuto.addEventListener('click', () => {
-                if (i == texts.length)
+                if (i == texts.length) {
                     tutorial.style.display = "none";
-                else {
+                    game_started = true;
+                } else {
                     if (i == texts.length - 1) {
                         btnTuto.value = "Empezar el juego";
                     }
@@ -248,8 +249,9 @@ function loadAudios() {
 
     audioLoader.load("music/halloween_song.ogg", buffer => {
         ambientSong.setBuffer(buffer);
-        ambientSong.setVolume(1);
+        ambientSong.setVolume(0.3);
         ambientSong.setLoop(true);
+        ambientSong.play();
     });   
 
     audioLoader.load("music/pa.ogg", buffer => {
@@ -455,8 +457,10 @@ function addLights() {
 }
 
 function addFog() {
-    fog = new THREE.Fog(0x958080, 0.1, 50);
+    fog = new THREE.FogExp2(0x958080, 0.04);
     scene.fog = fog;
+    // fog = new THREE.Fog(0x958080, 0.1, 50);
+    // scene.fog = fog;
 }
 
 function render() {
@@ -479,7 +483,10 @@ function render() {
 
 function update() {
     delta = clock.getDelta();
+    if (moving_bat)
+        lack_of_vision += delta;
 	if (bat) {
+        updateBatVision(lack_of_vision);
 		// mixer.update(1 / 250);
 		mixer.update(delta);
         mothMixers.forEach(mixer => {
@@ -493,6 +500,12 @@ function update() {
     
     TWEEN.update(delta);
     // panelUpdate();
+}
+
+function updateBatVision(counter) {
+    const alpha = 0.0008;
+    const functionValue = Math.E**(alpha * counter) - 0.96;
+    scene.fog.density = functionValue;
 }
 
 function updateAspectRatio() {
@@ -582,31 +595,36 @@ function updateDebugOptions(debugMode) {
 
 // ------------ TECLAS -----------------------
 function keydown(e) {
-    let key = e.key;
-    let captured = true;
+    if (game_started) {
+        let key = e.key;
+        let captured = true;
 
-    switch(key) {
-        case " ":
-            batSound.play();
-            break;
-        case "3":
-            debugMode = !debugMode;
-            updateDebugOptions();
-            break;
-        case "H":
-        case "h":
-            if (controlsPanel.style.display != "none")
-                controlsPanel.style.display = "none";
-            else
-                controlsPanel.style.display = "flex";
-            break;
-        default:
-            // console.log(key);
-            captured = false;
-    }
+        switch(key) {
+            case " ":
+                console.log(light);
+                lack_of_vision = 0;
+                batSound.play();
+                break;
+            case "3":
+                debugMode = !debugMode;
+                updateDebugOptions();
+                break;
+            case "H":
+            case "h":
+                if (controlsPanel.style.display != "none")
+                    controlsPanel.style.display = "none";
+                else
+                    controlsPanel.style.display = "flex";
+                break;
+            default:
+                // console.log(key);
+                captured = false;
+        }
 
-    if (captured) {
-        e.preventDefault();
+        if (captured) {
+            e.preventDefault();
+        }
+        moving_bat = true;
     }
 }
 // -------------------------------------------
