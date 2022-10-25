@@ -598,6 +598,7 @@ function keydown(e) {
     if (game_started) {
         let key = e.key;
         let captured = true;
+        flyControl.autoForward = true;
 
         switch(key) {
             case " ":
