@@ -53,6 +53,7 @@ html > div {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    font-size: 1.2rem;
 }
 
 #tutorial > div > div {
@@ -75,11 +76,17 @@ input {
     border-radius: 5px;
     transition: all .4s ease;
     -webkit-transition: all .4s ease;
+    padding: 5px 10px;
+    text-align: center;
+    vertical-align: center;
 }
 
 input:hover {
     background-color: rgba(255, 0, 0, 0.8);
     color: #FFEEAA;
+    padding: 5px 10px;
+    text-align: center;
+    vertical-align: center;
 }
 
 #controls {
