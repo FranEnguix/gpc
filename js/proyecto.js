@@ -431,7 +431,7 @@ function loadMoths() {
 }
 
 function loadSceneMap() {
-    const hdriBox = new THREE.Mesh(new THREE.BoxGeometry(100, 25, 45),
+    const hdriBox = new THREE.Mesh(new THREE.BoxGeometry(94, 25, 40),
         ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"].map((v, index, list) => {
             let tex = textureLoader.load("night/" + v);
             tex.repeat.set(16, 8);
