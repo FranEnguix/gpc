@@ -21,6 +21,7 @@ let cameraControls, planta;
 let gui, animation_panel;
 let textureLoader, sceneMap;
 let speed = 2;
+let lastMaterials = [], originalMaterials = true;
 const L = 100;
 
 // Funciones de ventana
@@ -219,16 +220,24 @@ function isWired(robot) {
 } 
 
 function changeMaterial(obj, material) {
+    let i = 0;
     let stack = [obj];
+    let wire = isWired(obj);
     while (stack.length > 0) {
         let part = stack.pop();
-        if (part.material)
+        if (part.material) {
+            if (originalMaterials)
+                lastMaterials.push(part.material);
+            if (wire)
+                material = lastMaterials[i++];
             part.material = material;
+        }
         if (part.children && part.children.length > 0)
             part.children.forEach(p => {
                 stack.push(p);
             });
     }
+    originalMaterials = false;
 }
 // -------------------------------------------
 
